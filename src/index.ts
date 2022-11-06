@@ -1,11 +1,10 @@
 import { App } from '@slack/bolt'
 import * as dotenv from 'dotenv'
+process.env.USE_DOTENV && dotenv.config()
 
 import dataService from './services/DataService'
 import nlpService from './services/NLPService'
 import stripUser from './utils/stripUser'
-
-dotenv.config()
 
 // initialize app
 const app = new App({
