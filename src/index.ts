@@ -4,6 +4,7 @@ process.env.USE_DOTENV && dotenv.config()
 
 import dataService from './services/DataService'
 import nlpService from './services/NLPService'
+import { formatQueryResult } from './utils/formatQueryResult'
 import stripUser from './utils/stripUser'
 
 // initialize app
@@ -14,7 +15,6 @@ const app = new App({
   appToken: process.env.SLACK_APP_TOKEN,
 })
 
-// Listens to incoming messages that contain "hello"
 app.event('app_mention', async ({ event, say }) => {
   const text = stripUser(event.text)
   const sqlQuery = await nlpService.nlqToSQL({
@@ -22,11 +22,22 @@ app.event('app_mention', async ({ event, say }) => {
     jobId: process.env.JOB_ID as string,
     serviceToken: process.env.SERVICE_TOKEN as string,
   })
-  await say(`<@${event.user}> here is your query in SQL: ${sqlQuery}`)
-  const sqlQueryResult = await dataService.runQuery(sqlQuery)
   await say(
-    `<@${event.user}> here is your answer: ${JSON.stringify(sqlQueryResult)}`
+    `<@${event.user}> here is your query in SQL:\n\`\`\`${sqlQuery}\`\`\``
   )
+  const sqlQueryResult = await dataService.runQuery(sqlQuery)
+  const { csv, pretty } = await formatQueryResult(sqlQueryResult)
+  const replyWithMarkdown = await say(
+    `<@${event.user}> here is what I found:\n\`\`\`${pretty}\`\`\``
+  )
+  await app.client.files.upload({
+    content: csv,
+    filename: `delphi_result_${replyWithMarkdown.ts}.csv`,
+    filetype: 'csv',
+    channels: event.channel,
+    thread_ts: replyWithMarkdown.ts,
+    initial_comment: `Open this file in Excel or Google Docs to explore the full result`,
+  })
 })
 ;(async () => {
   await app.start(process.env.PORT || 3000)

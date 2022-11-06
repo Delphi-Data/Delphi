@@ -2,7 +2,10 @@ import snowflake from 'snowflake-sdk'
 import { SnowflakeCredentials } from '../types/snowflake'
 import { promisify } from 'util'
 
-type QueryResult = Record<string, string | number | Date | boolean | JSON>[]
+export type QueryResult = Record<
+  string,
+  string | number | Date | boolean | JSON
+>[]
 
 interface IDataService {
   readonly runQuery: (sql: string) => Promise<QueryResult>
