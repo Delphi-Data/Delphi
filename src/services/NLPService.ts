@@ -1,18 +1,17 @@
 import fetch from 'node-fetch'
 
+type NLQToSQLParams = {
+  text: string
+  jobId: string
+  serviceToken: string
+}
+
 type NLPService = {
-  readonly nlqToSQL: ({
-    text,
-    orgId,
-  }: {
-    readonly text: string
-    readonly orgId: string
-  }) => Promise<string>
+  readonly nlqToSQL: (params: NLQToSQLParams) => Promise<string>
 }
 
 class MockNLPService implements NLPService {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  nlqToSQL(_: { readonly text: string }) {
+  nlqToSQL() {
     return Promise.resolve(
       `SELECT * FROM some_ideal_clean_and_pristine.table_that_you_think_exists`
     )
@@ -33,7 +32,7 @@ class HermesNLPService implements NLPService {
     this.apiClientId = params.apiClientId
     this.apiKey = params.apiKey
   }
-  async nlqToSQL({ text }: { readonly text: string }) {
+  async nlqToSQL({ text, jobId, serviceToken }: NLQToSQLParams) {
     const res = await fetch(`${this.apiBaseUrl}/dbt-sql-query`, {
       method: 'POST',
       headers: {
@@ -41,7 +40,7 @@ class HermesNLPService implements NLPService {
         'X-CLIENT-ID': this.apiClientId as string,
         'X-API-KEY': this.apiKey as string,
       },
-      body: JSON.stringify({ query: text }),
+      body: JSON.stringify({ query: text, jobId, serviceToken }),
     })
     const { dbtSQLQuery } = (await res.json()) as {
       readonly dbtSQLQuery: string

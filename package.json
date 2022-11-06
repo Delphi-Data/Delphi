@@ -47,12 +47,14 @@
     "@bitauth/libauth": "^1.17.1",
     "@slack/bolt": "^3.12.1",
     "dotenv": "^16.0.3",
-    "node-fetch": "2"
+    "node-fetch": "2",
+    "snowflake-sdk": "^1.6.15"
   },
   "devDependencies": {
     "@ava/typescript": "^1.1.1",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@types/node-fetch": "^2.6.2",
+    "@types/snowflake-sdk": "^1.6.8",
     "@typescript-eslint/eslint-plugin": "^5.41.0",
     "@typescript-eslint/parser": "^5.41.0",
     "ava": "^3.12.1",
