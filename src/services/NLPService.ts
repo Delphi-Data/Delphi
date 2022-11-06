@@ -1,4 +1,5 @@
 import fetch from 'node-fetch'
+import { QueryResult } from './DataService'
 
 type NLQToSQLParams = {
   text: string
@@ -6,8 +7,14 @@ type NLQToSQLParams = {
   serviceToken: string
 }
 
-type NLPService = {
+type GetAnswerParams = {
+  query: string
+  data: QueryResult
+}
+
+interface NLPService {
   readonly nlqToSQL: (params: NLQToSQLParams) => Promise<string>
+  readonly getAnswer: (params: GetAnswerParams) => Promise<string>
 }
 
 class MockNLPService implements NLPService {
@@ -15,6 +22,9 @@ class MockNLPService implements NLPService {
     return Promise.resolve(
       `SELECT * FROM some_ideal_clean_and_pristine.table_that_you_think_exists`
     )
+  }
+  getAnswer() {
+    return Promise.resolve(`The answer is no`)
   }
 }
 
@@ -46,6 +56,20 @@ class HermesNLPService implements NLPService {
       readonly dbtSQLQuery: string
     }
     return dbtSQLQuery
+  }
+
+  async getAnswer({ query, data }: GetAnswerParams) {
+    const res = await fetch(`${this.apiBaseUrl}/answer-question`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CLIENT-ID': this.apiClientId as string,
+        'X-API-KEY': this.apiKey as string,
+      },
+      body: JSON.stringify({ query, data }),
+    })
+    const { answer } = await res.json()
+    return answer
   }
 }
 

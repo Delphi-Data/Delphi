@@ -14,8 +14,27 @@ interface IDataService {
 class MockDataService implements IDataService {
   runQuery() {
     return Promise.resolve([
-      { a: '1', b: 2, c: 3 },
-      { a: '4', b: 5, c: 6 },
+      {
+        date_week: new Date('2022-10-16'),
+        had_gift_card_payment: true,
+        revenue: 139,
+        expenses: 33,
+        profit: 106,
+      },
+      {
+        date_week: new Date('2022-10-23'),
+        had_gift_card_payment: true,
+        revenue: 69,
+        expenses: 16,
+        profit: 53,
+      },
+      {
+        date_week: new Date('2022-10-30'),
+        had_gift_card_payment: true,
+        revenue: 96,
+        expenses: 21,
+        profit: 75,
+      },
     ])
   }
 }
