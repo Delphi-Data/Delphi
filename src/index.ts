@@ -43,6 +43,15 @@ app.event('app_mention', async ({ event, say }) => {
     thread_ts: event.ts,
     initial_comment: `Open this file in Excel or Google Docs to explore the full result`,
   })
+
+  // Get answer
+  if (process.env.GET_ANSWER_FROM_NLP) {
+    const answer = await nlpService.getAnswer({
+      query: text,
+      data: sqlQueryResult,
+    })
+    await say({ text: answer, thread_ts: event.ts })
+  }
 })
 
 // Start server
