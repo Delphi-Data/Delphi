@@ -7,8 +7,6 @@ import stripUser from './utils/stripUser'
 
 dotenv.config()
 
-console.info(process.env)
-
 // initialize app
 const app = new App({
   signingSecret: process.env.SLACK_SIGNING_TOKEN,
@@ -22,8 +20,8 @@ app.event('app_mention', async ({ event, say }) => {
   const text = stripUser(event.text)
   const sqlQuery = await nlpService.nlqToSQL({
     text,
-    jobId: process.env.JOB_ID,
-    serviceToken: process.env.SERVICE_TOKEN,
+    jobId: process.env.JOB_ID as string,
+    serviceToken: process.env.SERVICE_TOKEN as string,
   })
   await say(`<@${event.user}> here is your query in SQL: ${sqlQuery}`)
   const sqlQueryResult = await dataService.runQuery(sqlQuery)
