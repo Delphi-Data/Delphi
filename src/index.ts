@@ -23,26 +23,96 @@ app.event('app_mention', async ({ event, say }) => {
     jobId: process.env.JOB_ID as string,
     serviceToken: process.env.SERVICE_TOKEN as string,
   })
-  await say({
-    text: `<@${event.user}> here is your query in SQL:\n\`\`\`${sqlQuery}\`\`\``,
-    thread_ts: event.ts,
-  })
+  // await say({
+  //   text: `<@${event.user}> here is your query in SQL:\n\`\`\`${sqlQuery}\`\`\``,
+  //   thread_ts: event.ts,
+  // })
 
   // Run query against data
   const sqlQueryResult = await dataService.runQuery(sqlQuery)
-  const { csv, pretty } = await formatQueryResult(sqlQueryResult)
-  await say({
-    text: `<@${event.user}> here is what I found:\n\`\`\`${pretty}\`\`\``,
-    thread_ts: event.ts,
-  })
+  const { pretty } = await formatQueryResult(sqlQueryResult)
+  // await say({
+  //   text: `<@${event.user}> here is what I found:\n\`\`\`${pretty}\`\`\``,
+  //   blocks: [
+  //     {
+  //       type: 'm'
+  //     }
+  //   ],
+  //   thread_ts: event.ts,
+  // })
   await app.client.files.upload({
-    content: csv,
-    filename: `delphi_result_${event.ts}.csv`,
-    filetype: 'csv',
+    content: pretty,
+    filename: `delphi_result_${event.ts}.txt`,
+    filetype: 'txt',
     channels: event.channel,
     thread_ts: event.ts,
-    initial_comment: `Open this file in Excel or Google Docs to explore the full result`,
+    initial_comment: `<@${event.user}> here is what I found:`,
   })
+  await say({
+    text: `Want to dig in deeper?`,
+    thread_ts: event.ts,
+    blocks: [
+      {
+        type: 'header',
+        text: {
+          text: 'Dig in deeper:',
+          type: 'plain_text',
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: 'Download CSV for Excel or Google Sheets',
+        },
+        accessory: {
+          type: 'button',
+          style: 'primary',
+
+          text: {
+            type: 'plain_text',
+            text: 'Download',
+          },
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: 'See generated SQL',
+        },
+        accessory: {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: 'SQL',
+          },
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: 'View results in Lightdash',
+        },
+        accessory: {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: '⚡️ Lightdash',
+          },
+        },
+      },
+    ],
+  })
+  // await app.client.files.upload({
+  //   content: csv,
+  //   filename: `delphi_result_${event.ts}.csv`,
+  //   filetype: 'csv',
+  //   channels: event.channel,
+  //   thread_ts: event.ts,
+  //   initial_comment: `Open this file in Excel or Google Docs to explore the full result`,
+  // })
 
   // Get answer
   if (process.env.GET_ANSWER_FROM_NLP) {
