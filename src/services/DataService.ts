@@ -1,6 +1,7 @@
 import snowflake from 'snowflake-sdk'
 import { SnowflakeCredentials } from '../types/snowflake'
 import { promisify } from 'util'
+import fetch from 'node-fetch'
 
 export type QueryResult = Record<
   string,
@@ -8,7 +9,7 @@ export type QueryResult = Record<
 >[]
 
 interface IDataService {
-  readonly runQuery: (sql: string) => Promise<QueryResult>
+  readonly runQuery: (query: string) => Promise<QueryResult>
 }
 
 class MockDataService implements IDataService {
@@ -65,20 +66,38 @@ class SnowflakeDataService implements IDataService {
   }
 }
 
-const instance =
-  process.env.SNOWFLAKE_ACCOUNT &&
-  process.env.SNOWFLAKE_USERNAME &&
-  process.env.SNOWFLAKE_ACCESS_URL
-    ? new SnowflakeDataService({
-        account: process.env.SNOWFLAKE_ACCOUNT,
-        username: process.env.SNOWFLAKE_USERNAME,
-        accessUrl: process.env.SNOWFLAKE_ACCESS_URL,
-        password: process.env.SNOWFLAKE_PASSWORD,
-        database: process.env.SNOWFLAKE_DATABASE,
-        schema: process.env.SNOWFLAKE_SCHEMA,
-        warehouse: process.env.SNOWFLAKE_WAREHOUSE,
-        role: process.env.SNOWFLAKE_ROLE,
-      })
-    : new MockDataService()
+class LightdashDataService implements IDataService {
+  private readonly baseURL: string
+  constructor(baseURL: string) {
+    this.baseURL = baseURL
+  }
+
+  async runQuery(query: string) {
+    const res = await fetch(this.baseURL, {
+      method: 'POST',
+      body: query,
+    })
+    return mapLightdashResponseToQueryResult(
+      (await res.json()) as LightdashResponse
+    )
+  }
+}
+
+const instance = process.env.LIGHTDASH_BASE_URL
+  ? new LightdashDataService(process.env.LIGHTDASH_BASE_URL)
+  : process.env.SNOWFLAKE_ACCOUNT &&
+    process.env.SNOWFLAKE_USERNAME &&
+    process.env.SNOWFLAKE_ACCESS_URL
+  ? new SnowflakeDataService({
+      account: process.env.SNOWFLAKE_ACCOUNT,
+      username: process.env.SNOWFLAKE_USERNAME,
+      accessUrl: process.env.SNOWFLAKE_ACCESS_URL,
+      password: process.env.SNOWFLAKE_PASSWORD,
+      database: process.env.SNOWFLAKE_DATABASE,
+      schema: process.env.SNOWFLAKE_SCHEMA,
+      warehouse: process.env.SNOWFLAKE_WAREHOUSE,
+      role: process.env.SNOWFLAKE_ROLE,
+    })
+  : new MockDataService()
 
 export default instance

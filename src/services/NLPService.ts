@@ -1,5 +1,6 @@
 import { QueryResult } from './DataService'
 import { fetchHermes } from '../utils'
+import { LightdashExplore, LightdashQuery } from '../types/lightdash'
 
 type NLQToDbtSQLParams = {
   text: string
@@ -10,7 +11,10 @@ type NLQToDbtSQLParams = {
 type NLQToLightdashQueryParams = {
   text: string
   baseURL: string
+  explores: LightdashExplore[]
 }
+
+type NLQToQueryParams = NLQToDbtSQLParams & NLQToLightdashQueryParams
 
 type GetAnswerParams = {
   query: string
@@ -18,12 +22,14 @@ type GetAnswerParams = {
 }
 
 interface NLPService {
-  readonly nlqToDbtSQL: (params: NLQToDbtSQLParams) => Promise<string>
+  readonly nlqToQuery: (
+    params: NLQToQueryParams
+  ) => Promise<string | LightdashQuery>
   readonly getAnswer: (params: GetAnswerParams) => Promise<string>
 }
 
 class MockNLPService implements NLPService {
-  nlqToDbtSQL() {
+  nlqToQuery() {
     return Promise.resolve(
       `SELECT * FROM some_ideal_clean_and_pristine.table_that_you_think_exists`
     )
@@ -47,7 +53,11 @@ class HermesNLPService implements NLPService {
     this.apiClientId = params.apiClientId
     this.apiKey = params.apiKey
   }
-  async nlqToDbtSQL({ text, jobId, serviceToken }: NLQToDbtSQLParams) {
+  private async nlqToDbtSQLQuery({
+    text,
+    jobId,
+    serviceToken,
+  }: NLQToDbtSQLParams) {
     const res = await fetchHermes({
       baseURL: this.apiBaseUrl,
       endpoint: 'dbt-sql-query',
@@ -68,7 +78,7 @@ class HermesNLPService implements NLPService {
    * @param params
    * NOTE: baseURL should include the project ID, e.g. https://demo.lightdash.com/api/v1/projects/2014e038-ff4b-4761-ae6f-fbf551e7b468/
    */
-  async nlqToLightdashQuery({ text, baseURL }: NLQToLightdashQueryParams) {
+  private async nlqToLightdashQuery(params: NLQToLightdashQueryParams) {
     const res = await fetchHermes({
       baseURL: this.apiBaseUrl,
       endpoint: 'lightdash-query',
@@ -76,10 +86,18 @@ class HermesNLPService implements NLPService {
         apiClientId: this.apiClientId,
         apiKey: this.apiKey,
       },
-      body: JSON.stringify({ query: text, baseURL }),
+      body: JSON.stringify(params),
     })
-    const { lightdashQuery } = await res.json()
+    const { lightdashQuery } = (await res.json()) as {
+      lightdashQuery: LightdashQuery
+    }
     return lightdashQuery
+  }
+
+  async nlqToQuery(params: NLQToDbtSQLParams & NLQToLightdashQueryParams) {
+    return process.env.LIGHTDASH_BASE_URL
+      ? await this.nlqToLightdashQuery(params)
+      : await this.nlqToDbtSQLQuery(params)
   }
 
   async getAnswer({ query, data }: GetAnswerParams) {
