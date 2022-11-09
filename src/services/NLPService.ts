@@ -71,7 +71,7 @@ class HermesNLPService implements NLPService {
   async nlqToLightdashQuery({ text, baseURL }: NLQToLightdashQueryParams) {
     const res = await fetchHermes({
       baseURL: this.apiBaseUrl,
-      endpoint: 'answer-question',
+      endpoint: 'lightdash-query',
       credentials: {
         apiClientId: this.apiClientId,
         apiKey: this.apiKey,
