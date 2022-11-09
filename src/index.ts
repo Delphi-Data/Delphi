@@ -18,7 +18,7 @@ const app = new App({
 app.event('app_mention', async ({ event, say }) => {
   const text = stripUser(event.text)
   // Get query
-  const sqlQuery = await nlpService.nlqToSQL({
+  const sqlQuery = await nlpService.nlqToDbtSQL({
     text,
     jobId: process.env.JOB_ID as string,
     serviceToken: process.env.SERVICE_TOKEN as string,

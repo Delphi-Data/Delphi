@@ -1,10 +1,15 @@
-import fetch from 'node-fetch'
 import { QueryResult } from './DataService'
+import { fetchHermes } from '../utils'
 
-type NLQToSQLParams = {
+type NLQToDbtSQLParams = {
   text: string
   jobId: string
   serviceToken: string
+}
+
+type NLQToLightdashQueryParams = {
+  text: string
+  baseURL: string
 }
 
 type GetAnswerParams = {
@@ -13,12 +18,12 @@ type GetAnswerParams = {
 }
 
 interface NLPService {
-  readonly nlqToSQL: (params: NLQToSQLParams) => Promise<string>
+  readonly nlqToDbtSQL: (params: NLQToDbtSQLParams) => Promise<string>
   readonly getAnswer: (params: GetAnswerParams) => Promise<string>
 }
 
 class MockNLPService implements NLPService {
-  nlqToSQL() {
+  nlqToDbtSQL() {
     return Promise.resolve(
       `SELECT * FROM some_ideal_clean_and_pristine.table_that_you_think_exists`
     )
@@ -42,13 +47,13 @@ class HermesNLPService implements NLPService {
     this.apiClientId = params.apiClientId
     this.apiKey = params.apiKey
   }
-  async nlqToSQL({ text, jobId, serviceToken }: NLQToSQLParams) {
-    const res = await fetch(`${this.apiBaseUrl}/dbt-sql-query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CLIENT-ID': this.apiClientId as string,
-        'X-API-KEY': this.apiKey as string,
+  async nlqToDbtSQL({ text, jobId, serviceToken }: NLQToDbtSQLParams) {
+    const res = await fetchHermes({
+      baseURL: this.apiBaseUrl,
+      endpoint: 'dbt-sql-query',
+      credentials: {
+        apiClientId: this.apiClientId,
+        apiKey: this.apiKey,
       },
       body: JSON.stringify({ query: text, jobId, serviceToken }),
     })
@@ -58,13 +63,32 @@ class HermesNLPService implements NLPService {
     return dbtSQLQuery
   }
 
+  /**
+   *
+   * @param params
+   * NOTE: baseURL should include the project ID, e.g. https://demo.lightdash.com/api/v1/projects/2014e038-ff4b-4761-ae6f-fbf551e7b468/
+   */
+  async nlqToLightdashQuery({ text, baseURL }: NLQToLightdashQueryParams) {
+    const res = await fetchHermes({
+      baseURL: this.apiBaseUrl,
+      endpoint: 'answer-question',
+      credentials: {
+        apiClientId: this.apiClientId,
+        apiKey: this.apiKey,
+      },
+      body: JSON.stringify({ query: text, baseURL }),
+    })
+    const { lightdashQuery } = await res.json()
+    return lightdashQuery
+  }
+
   async getAnswer({ query, data }: GetAnswerParams) {
-    const res = await fetch(`${this.apiBaseUrl}/answer-question`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CLIENT-ID': this.apiClientId as string,
-        'X-API-KEY': this.apiKey as string,
+    const res = await fetchHermes({
+      baseURL: this.apiBaseUrl,
+      endpoint: 'answer-question',
+      credentials: {
+        apiClientId: this.apiClientId,
+        apiKey: this.apiKey,
       },
       body: JSON.stringify({ query, data }),
     })
