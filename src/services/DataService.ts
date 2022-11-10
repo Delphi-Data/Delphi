@@ -1,6 +1,7 @@
 import snowflake from 'snowflake-sdk'
 import { SnowflakeCredentials } from '../types/snowflake'
 import { promisify } from 'util'
+import { Config } from './ConfigService'
 
 export type QueryResult = Record<
   string,
@@ -65,20 +66,19 @@ class SnowflakeDataService implements IDataService {
   }
 }
 
-const instance =
-  process.env.SNOWFLAKE_ACCOUNT &&
-  process.env.SNOWFLAKE_USERNAME &&
-  process.env.SNOWFLAKE_ACCESS_URL
+export const getDataService = (config: Partial<Config>): IDataService => {
+  return config.snowflakeAccount &&
+    config.snowflakeUsername &&
+    config.snowflakeAccessUrl
     ? new SnowflakeDataService({
-        account: process.env.SNOWFLAKE_ACCOUNT,
-        username: process.env.SNOWFLAKE_USERNAME,
-        accessUrl: process.env.SNOWFLAKE_ACCESS_URL,
-        password: process.env.SNOWFLAKE_PASSWORD,
-        database: process.env.SNOWFLAKE_DATABASE,
-        schema: process.env.SNOWFLAKE_SCHEMA,
-        warehouse: process.env.SNOWFLAKE_WAREHOUSE,
-        role: process.env.SNOWFLAKE_ROLE,
+        account: config.snowflakeAccount,
+        username: config.snowflakeUsername,
+        accessUrl: config.snowflakeAccessUrl,
+        password: config.snowflakePassword,
+        database: config.snowflakeDatabase,
+        schema: config.snowflakeSchema,
+        warehouse: config.snowflakeWarehouse,
+        role: config.snowflakeRole,
       })
     : new MockDataService()
-
-export default instance
+}

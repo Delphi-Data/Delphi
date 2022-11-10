@@ -1,6 +1,7 @@
 import { App, ButtonClick, SectionBlock } from '@slack/bolt'
 import * as dotenv from 'dotenv'
-process.env.USE_DOTENV && dotenv.config()
+import configService from './services/ConfigService'
+dotenv.config()
 
 import dataService from './services/DataService'
 import nlpService from './services/NLPService'
@@ -19,12 +20,14 @@ app.event('app_mention', async ({ event, say }) => {
   const text = stripUser(event.text)
   console.info(`query asked: ${text}`)
 
+  const credentials = event.team ? await configService.getAll(event.team) : {}
+
   try {
     // Get query
     const sqlQuery = await nlpService.nlqToSQL({
       text,
-      jobId: process.env.DBT_CLOUD_JOB_ID as string,
-      serviceToken: process.env.DBT_CLOUD_SERVICE_TOKEN as string,
+      jobId: credentials.dbtCloudJobID as string,
+      serviceToken: credentials.dbtCloudServiceToken as string,
     })
 
     // Run query against data
@@ -90,7 +93,7 @@ app.event('app_mention', async ({ event, say }) => {
             value: sqlQuery,
           },
         },
-        ...(process.env.LIGHTDASH_URL
+        ...(credentials.lightdashUrl
           ? [
               {
                 type: 'section',
