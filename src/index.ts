@@ -1,4 +1,4 @@
-import { App, ButtonClick } from '@slack/bolt'
+import { App, ButtonClick, SectionBlock } from '@slack/bolt'
 import * as dotenv from 'dotenv'
 process.env.USE_DOTENV && dotenv.config()
 
@@ -17,108 +17,123 @@ const app = new App({
 
 app.event('app_mention', async ({ event, say }) => {
   const text = stripUser(event.text)
-  // Get query
-  const sqlQuery = await nlpService.nlqToSQL({
-    text,
-    jobId: process.env.JOB_ID as string,
-    serviceToken: process.env.SERVICE_TOKEN as string,
-  })
+  console.info(`query asked: ${text}`)
 
-  // Run query against data
-  const sqlQueryResult = await dataService.runQuery(sqlQuery)
-  const { pretty } = await formatQueryResult(sqlQueryResult)
-
-  await app.client.files.upload({
-    content: pretty,
-    filename: `delphi_result_${event.ts}.txt`,
-    filetype: 'txt',
-    channels: event.channel,
-    thread_ts: event.ts,
-    initial_comment: `<@${event.user}> here is what I found:`,
-  })
-  await say({
-    text: `Want to dig in deeper?`,
-    thread_ts: event.ts,
-    blocks: [
-      {
-        type: 'header',
-        text: {
-          text: 'Dig in deeper:',
-          type: 'plain_text',
-        },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'Download CSV for Excel or Google Sheets',
-        },
-        accessory: {
-          type: 'button',
-          style: 'primary',
-          text: {
-            type: 'plain_text',
-            text: 'Download',
-          },
-          action_id: 'download_csv',
-        },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'See generated SQL',
-        },
-        accessory: {
-          type: 'button',
-          text: {
-            type: 'plain_text',
-            text: 'SQL',
-          },
-          action_id: 'view_sql',
-          value: sqlQuery,
-        },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'View results in Lightdash',
-        },
-        accessory: {
-          type: 'button',
-          text: {
-            type: 'plain_text',
-            text: '⚡️ Lightdash',
-          },
-          action_id: 'view_in_lightdash',
-        },
-      },
-    ],
-  })
-  // await app.client.files.upload({
-  //   content: csv,
-  //   filename: `delphi_result_${event.ts}.csv`,
-  //   filetype: 'csv',
-  //   channels: event.channel,
-  //   thread_ts: event.ts,
-  //   initial_comment: `Open this file in Excel or Google Docs to explore the full result`,
-  // })
-
-  // Get answer
-  if (process.env.GET_ANSWER_FROM_NLP) {
-    const answer = await nlpService.getAnswer({
-      query: text,
-      data: sqlQueryResult,
+  try {
+    // Get query
+    const sqlQuery = await nlpService.nlqToSQL({
+      text,
+      jobId: process.env.JOB_ID as string,
+      serviceToken: process.env.SERVICE_TOKEN as string,
     })
-    await say({ text: answer, thread_ts: event.ts })
+
+    // Run query against data
+    const sqlQueryResult = await dataService.runQuery(sqlQuery)
+    const { pretty, csv } = await formatQueryResult(sqlQueryResult)
+
+    const [csvFile] = await Promise.all([
+      app.client.files.upload({
+        content: csv,
+        filename: `delphi_result_${event.ts}.csv`,
+        filetype: 'csv',
+      }),
+      app.client.files.upload({
+        content: pretty,
+        filename: `delphi_result_${event.ts}.txt`,
+        filetype: 'txt',
+        channels: event.channel,
+        thread_ts: event.ts,
+        initial_comment: `<@${event.user}> here is what I found:`,
+      }),
+    ])
+    await say({
+      text: `Want to dig in deeper?`,
+      thread_ts: event.ts,
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            text: 'Dig in deeper:',
+            type: 'plain_text',
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: 'Download CSV for Excel or Google Sheets',
+          },
+          accessory: {
+            type: 'button',
+            style: 'primary',
+            text: {
+              type: 'plain_text',
+              text: 'Download',
+            },
+            action_id: 'download_csv',
+            url: csvFile.file?.url_private_download,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: 'See generated SQL',
+          },
+          accessory: {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: 'SQL',
+            },
+            action_id: 'view_sql',
+            value: sqlQuery,
+          },
+        },
+        ...(process.env.LIGHTDASH_URL
+          ? [
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: 'View results in Lightdash',
+                },
+                accessory: {
+                  type: 'button',
+                  text: {
+                    type: 'plain_text',
+                    text: '⚡️ Lightdash',
+                  },
+                  action_id: 'view_in_lightdash',
+                  url: `${
+                    process.env.LIGHTDASH_URL
+                  }/sqlRunner?sql_runner=${encodeURI(
+                    JSON.stringify({ sql: sqlQuery })
+                  )}`,
+                },
+              } as SectionBlock,
+            ]
+          : []),
+      ],
+    })
+
+    // Get answer
+    if (process.env.GET_ANSWER_FROM_NLP) {
+      const answer = await nlpService.getAnswer({
+        query: text,
+        data: sqlQueryResult,
+      })
+      await say({ text: answer, thread_ts: event.ts })
+    }
+  } catch (error) {
+    console.error(`error running query`, error)
   }
 })
 
 // Action listeners
 app.action('view_sql', async ({ ack, payload, body }) => {
   await ack()
-  // Update the message to reflect the action
+  console.info('view_sql button clicked')
   await app.client.views.open({
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     //@ts-ignore trigger_id is clearly in the body type; not sure why this is complaining
@@ -140,6 +155,16 @@ app.action('view_sql', async ({ ack, payload, body }) => {
       ],
     },
   })
+})
+
+app.action('download_csv', async ({ ack }) => {
+  await ack()
+  console.info('download_csv button clicked')
+})
+
+app.action('view_in_lightdash', async ({ ack }) => {
+  await ack()
+  console.info('view_in_lightdash button clicked')
 })
 
 // Start server
