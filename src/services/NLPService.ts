@@ -1,4 +1,5 @@
 import fetch from 'node-fetch'
+import { Config } from './ConfigService'
 import { QueryResult } from './DataService'
 
 type NLQToSQLParams = {
@@ -73,11 +74,12 @@ class HermesNLPService implements NLPService {
   }
 }
 
-const mockNlpService = process.env.HERMES_API_BASE_URL
-  ? new HermesNLPService({
-      apiBaseUrl: process.env.HERMES_API_BASE_URL,
-      apiClientId: process.env.HERMES_API_CLIENT_ID,
-      apiKey: process.env.HERMES_API_KEY,
-    })
-  : new MockNLPService()
-export default mockNlpService
+export const getNLPService = (config: Partial<Config>) => {
+  return process.env.HERMES_API_BASE_URL
+    ? new HermesNLPService({
+        apiBaseUrl: process.env.HERMES_API_BASE_URL,
+        apiClientId: config.delphiClientID,
+        apiKey: config.delphiAPIKey,
+      })
+    : new MockNLPService()
+}

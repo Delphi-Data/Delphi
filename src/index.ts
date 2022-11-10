@@ -1,9 +1,10 @@
 import { App, ButtonClick, SectionBlock } from '@slack/bolt'
 import * as dotenv from 'dotenv'
-process.env.USE_DOTENV && dotenv.config()
+import configService from './services/ConfigService'
+dotenv.config()
 
-import dataService from './services/DataService'
-import nlpService from './services/NLPService'
+import { getDataService } from './services/DataService'
+import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import stripUser from './utils/stripUser'
 
@@ -19,12 +20,17 @@ app.event('app_mention', async ({ event, say }) => {
   const text = stripUser(event.text)
   console.info(`query asked: ${text}`)
 
+  const config = event.team ? await configService.getAll(event.team) : {}
+
   try {
+    const dataService = getDataService(config)
+    const nlpService = getNLPService(config)
+
     // Get query
     const sqlQuery = await nlpService.nlqToSQL({
       text,
-      jobId: process.env.DBT_CLOUD_JOB_ID as string,
-      serviceToken: process.env.DBT_CLOUD_SERVICE_TOKEN as string,
+      jobId: config.dbtCloudJobID as string,
+      serviceToken: config.dbtCloudServiceToken as string,
     })
 
     // Run query against data
@@ -90,7 +96,7 @@ app.event('app_mention', async ({ event, say }) => {
             value: sqlQuery,
           },
         },
-        ...(process.env.LIGHTDASH_URL
+        ...(config.lightdashUrl
           ? [
               {
                 type: 'section',
