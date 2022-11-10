@@ -23,8 +23,8 @@ app.event('app_mention', async ({ event, say }) => {
     // Get query
     const sqlQuery = await nlpService.nlqToSQL({
       text,
-      jobId: process.env.JOB_ID as string,
-      serviceToken: process.env.SERVICE_TOKEN as string,
+      jobId: process.env.DBT_CLOUD_JOB_ID as string,
+      serviceToken: process.env.DBT_CLOUD_SERVICE_TOKEN as string,
     })
 
     // Run query against data
@@ -126,6 +126,10 @@ app.event('app_mention', async ({ event, say }) => {
       await say({ text: answer, thread_ts: event.ts })
     }
   } catch (error) {
+    await say({
+      text: `Sorry, I'm not sure. Try asking the question a slightly different way - I might just need a little more help!`,
+      thread_ts: event.ts,
+    })
     console.error(`error running query`, error)
   }
 })
