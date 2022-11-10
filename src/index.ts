@@ -1,4 +1,4 @@
-import { App } from '@slack/bolt'
+import { App, ButtonClick } from '@slack/bolt'
 import * as dotenv from 'dotenv'
 process.env.USE_DOTENV && dotenv.config()
 
@@ -23,23 +23,11 @@ app.event('app_mention', async ({ event, say }) => {
     jobId: process.env.JOB_ID as string,
     serviceToken: process.env.SERVICE_TOKEN as string,
   })
-  // await say({
-  //   text: `<@${event.user}> here is your query in SQL:\n\`\`\`${sqlQuery}\`\`\``,
-  //   thread_ts: event.ts,
-  // })
 
   // Run query against data
   const sqlQueryResult = await dataService.runQuery(sqlQuery)
   const { pretty } = await formatQueryResult(sqlQueryResult)
-  // await say({
-  //   text: `<@${event.user}> here is what I found:\n\`\`\`${pretty}\`\`\``,
-  //   blocks: [
-  //     {
-  //       type: 'm'
-  //     }
-  //   ],
-  //   thread_ts: event.ts,
-  // })
+
   await app.client.files.upload({
     content: pretty,
     filename: `delphi_result_${event.ts}.txt`,
@@ -68,11 +56,11 @@ app.event('app_mention', async ({ event, say }) => {
         accessory: {
           type: 'button',
           style: 'primary',
-
           text: {
             type: 'plain_text',
             text: 'Download',
           },
+          action_id: 'download_csv',
         },
       },
       {
@@ -87,6 +75,8 @@ app.event('app_mention', async ({ event, say }) => {
             type: 'plain_text',
             text: 'SQL',
           },
+          action_id: 'view_sql',
+          value: sqlQuery,
         },
       },
       {
@@ -101,6 +91,7 @@ app.event('app_mention', async ({ event, say }) => {
             type: 'plain_text',
             text: '⚡️ Lightdash',
           },
+          action_id: 'view_in_lightdash',
         },
       },
     ],
@@ -122,6 +113,33 @@ app.event('app_mention', async ({ event, say }) => {
     })
     await say({ text: answer, thread_ts: event.ts })
   }
+})
+
+// Action listeners
+app.action('view_sql', async ({ ack, payload, body }) => {
+  await ack()
+  // Update the message to reflect the action
+  await app.client.views.open({
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //@ts-ignore trigger_id is clearly in the body type; not sure why this is complaining
+    trigger_id: body.trigger_id,
+    view: {
+      title: {
+        type: 'plain_text',
+        text: 'View SQL',
+      },
+      type: 'modal',
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `\`\`\`${(payload as ButtonClick).value}\`\`\``,
+          },
+        },
+      ],
+    },
+  })
 })
 
 // Start server
