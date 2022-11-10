@@ -8,6 +8,12 @@ import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import stripUser from './utils/stripUser'
 
+type DownloadFileActionPayload = {
+  channel: string
+  thread: string
+  url: string
+}
+
 // initialize app
 const app = new App({
   signingSecret: process.env.SLACK_SIGNING_TOKEN,
@@ -77,6 +83,11 @@ app.event('app_mention', async ({ event, say }) => {
               text: 'Download',
             },
             action_id: 'download_csv',
+            value: JSON.stringify({
+              channel: event.channel,
+              thread: event.ts,
+              url: csvFile.file?.permalink,
+            } as DownloadFileActionPayload),
             url: csvFile.file?.url_private_download,
           },
         },
@@ -167,9 +178,17 @@ app.action('view_sql', async ({ ack, payload, body }) => {
   })
 })
 
-app.action('download_csv', async ({ ack }) => {
+app.action('download_csv', async ({ ack, say, payload }) => {
   await ack()
   console.info('download_csv button clicked')
+  const { channel, thread, url } = JSON.parse(
+    (payload as ButtonClick).value
+  ) as DownloadFileActionPayload
+  await say({
+    text: url,
+    channel,
+    thread_ts: thread,
+  })
 })
 
 app.action('view_in_lightdash', async ({ ack }) => {
