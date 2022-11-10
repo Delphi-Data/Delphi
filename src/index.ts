@@ -3,8 +3,8 @@ import * as dotenv from 'dotenv'
 import configService from './services/ConfigService'
 dotenv.config()
 
-import dataService from './services/DataService'
-import nlpService from './services/NLPService'
+import { getDataService } from './services/DataService'
+import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import stripUser from './utils/stripUser'
 
@@ -20,14 +20,17 @@ app.event('app_mention', async ({ event, say }) => {
   const text = stripUser(event.text)
   console.info(`query asked: ${text}`)
 
-  const credentials = event.team ? await configService.getAll(event.team) : {}
+  const config = event.team ? await configService.getAll(event.team) : {}
 
   try {
+    const dataService = getDataService(config)
+    const nlpService = getNLPService(config)
+
     // Get query
     const sqlQuery = await nlpService.nlqToSQL({
       text,
-      jobId: credentials.dbtCloudJobID as string,
-      serviceToken: credentials.dbtCloudServiceToken as string,
+      jobId: config.dbtCloudJobID as string,
+      serviceToken: config.dbtCloudServiceToken as string,
     })
 
     // Run query against data
@@ -93,7 +96,7 @@ app.event('app_mention', async ({ event, say }) => {
             value: sqlQuery,
           },
         },
-        ...(credentials.lightdashUrl
+        ...(config.lightdashUrl
           ? [
               {
                 type: 'section',

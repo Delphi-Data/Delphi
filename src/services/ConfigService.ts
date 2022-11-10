@@ -1,6 +1,8 @@
 import { createClient, RedisClientType } from 'redis'
 
 export type Config = {
+  delphiClientID: string
+  delphiAPIKey: string
   dbtCloudJobID: string
   dbtCloudServiceToken: string
   lightdashUrl: string
@@ -21,9 +23,6 @@ interface IConfigService {
 }
 
 class EnvConfigService implements IConfigService {
-  constructor() {
-    dotenv.config()
-  }
   set(): Promise<void> {
     throw new Error(`cannot set environment variables`)
   }
@@ -32,6 +31,8 @@ class EnvConfigService implements IConfigService {
   }
   getAll() {
     return Promise.resolve({
+      delphiClientID: process.env.DELPHI_CLIENT_ID,
+      delphiAPIKey: process.env.DELPHI_API_KEY,
       dbtCloudJobID: process.env.DBT_CLOUD_JOB_ID,
       dbtCloudServiceToken: process.env.DBT_CLOUD_SERVICE_TOKEN,
       lightdashUrl: process.env.LIGHTDASH_URL,
