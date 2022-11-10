@@ -9,7 +9,8 @@ const prettyPrint = (table: Table): string => {
   logger.log = (message: string) => {
     pretty = message
   }
-  logger.table(table.objects())
+  // stringify and then re-parse because otherwise dates show up as [DATE]
+  logger.table(JSON.parse(JSON.stringify(table.objects())))
   return pretty
 }
 
