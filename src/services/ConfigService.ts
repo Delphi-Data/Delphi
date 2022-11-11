@@ -31,7 +31,7 @@ class Encrypter {
       throw new Error('no encryption key provided')
     }
     this.algorithm = 'aes-256-cbc'
-    this.key = crypto.scryptSync(encryptionKey, 'salt', 24)
+    this.key = crypto.scryptSync(encryptionKey, 'salt', 32)
   }
 
   encrypt(clearText: string) {
@@ -88,26 +88,21 @@ class RedisConfigService implements IConfigService {
   constructor(connectionString: string) {
     console.info('initializing RedisConfigService')
     this.client = createClient({ url: connectionString })
+    this.client.connect()
     this.encrypter = new Encrypter(process.env.ENCRYPTION_KEY)
   }
 
   async set(teamID: string, field: keyof Config, value: string) {
-    await this.client.connect()
     await this.client.hSet(teamID, field, this.encrypter.encrypt(value))
-    await this.client.disconnect()
   }
 
   async get(teamID: string, field: keyof Config) {
-    await this.client.connect()
     const res = await this.client.hGet(teamID, field)
-    await this.client.disconnect()
     return res ? this.encrypter.decrypt(res) : undefined
   }
 
   async getAll(teamID: string) {
-    await this.client.connect()
     const res = await this.client.hGetAll(teamID)
-    await this.client.disconnect()
     Object.keys(res).forEach((key) => {
       res[key] = this.encrypter.decrypt(res[key])
     })

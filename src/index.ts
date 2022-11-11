@@ -217,7 +217,7 @@ app.view('config_modal_submit', async ({ ack, view, payload }) => {
       val[key].value,
     ])
     config.forEach(([key, val]) => {
-      configService.set(payload.team_id, key as keyof Config, val as string)
+      val && configService.set(payload.team_id, key as keyof Config, val)
     })
   } catch (error) {
     // TODO: show the user an error message. Rn it is telling me the trigger_id is invalid

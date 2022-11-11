@@ -225,10 +225,6 @@ export const configView: ModalView = {
         text: 'Lightdash URL (including project)',
         emoji: true,
       },
-      hint: {
-        type: 'plain_text',
-        text: 'optional',
-      },
     },
     // Unclear if we need schema:
     // {
