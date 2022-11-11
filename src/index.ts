@@ -7,6 +7,7 @@ import { getDataService } from './services/DataService'
 import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import stripUser from './utils/stripUser'
+import { configView, homeView, getSQLView } from './views'
 
 type DownloadFileActionPayload = {
   channel: string
@@ -155,27 +156,12 @@ app.event('app_mention', async ({ event, say }) => {
 app.action('view_sql', async ({ ack, payload, body }) => {
   await ack()
   console.info('view_sql button clicked')
-  await app.client.views.open({
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore trigger_id is clearly in the body type; not sure why this is complaining
-    trigger_id: body.trigger_id,
-    view: {
-      title: {
-        type: 'plain_text',
-        text: 'View SQL',
-      },
-      type: 'modal',
-      blocks: [
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `\`\`\`${(payload as ButtonClick).value}\`\`\``,
-          },
-        },
-      ],
-    },
-  })
+  await app.client.views.open(
+    getSQLView({
+      triggerID: (body as { trigger_id: string }).trigger_id,
+      sql: (payload as ButtonClick).value,
+    })
+  )
 })
 
 app.action('download_csv', async ({ ack, say, payload }) => {
@@ -194,6 +180,23 @@ app.action('download_csv', async ({ ack, say, payload }) => {
 app.action('view_in_lightdash', async ({ ack }) => {
   await ack()
   console.info('view_in_lightdash button clicked')
+})
+
+app.event('app_home_opened', async ({ payload }) => {
+  console.info('app home opened')
+  app.client.views.publish({
+    user_id: payload.user,
+    view: homeView,
+  })
+})
+
+app.action('open_config_modal', async ({ ack, body }) => {
+  await ack()
+  console.info('open_config_modal button clicked')
+  app.client.views.open({
+    view: configView,
+    trigger_id: (body as { trigger_id: string }).trigger_id,
+  })
 })
 
 // Start server
