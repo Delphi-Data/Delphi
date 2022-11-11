@@ -1,6 +1,7 @@
 import { ModalView } from '@slack/bolt'
+import { Config } from '../services/ConfigService'
 
-export const configView: ModalView = {
+export const getConfigView = (config: Partial<Config>): ModalView => ({
   type: 'modal',
   title: {
     type: 'plain_text',
@@ -21,6 +22,7 @@ export const configView: ModalView = {
       element: {
         type: 'plain_text_input',
         action_id: 'delphiClientID',
+        initial_value: config.delphiClientID,
       },
       label: {
         type: 'plain_text',
@@ -55,6 +57,7 @@ export const configView: ModalView = {
       element: {
         type: 'plain_text_input',
         action_id: 'dbtCloudJobID',
+        initial_value: config.dbtCloudJobID,
       },
       label: {
         type: 'plain_text',
@@ -93,6 +96,7 @@ export const configView: ModalView = {
           type: 'plain_text',
           text: 'cib42085.us-east-1',
         },
+        initial_value: config.snowflakeAccount,
       },
       label: {
         type: 'plain_text',
@@ -109,6 +113,7 @@ export const configView: ModalView = {
       element: {
         type: 'plain_text_input',
         action_id: 'snowflakeUsername',
+        initial_value: config.snowflakeUsername,
       },
       label: {
         type: 'plain_text',
@@ -135,6 +140,7 @@ export const configView: ModalView = {
       element: {
         type: 'plain_text_input',
         action_id: 'snowflakeRole',
+        initial_value: config.snowflakeRole,
       },
       label: {
         type: 'plain_text',
@@ -164,6 +170,7 @@ export const configView: ModalView = {
           type: 'plain_text',
           text: 'https://eagle-hqya7.proxy.cloud.getdbt.com',
         },
+        initial_value: config.snowflakeAccessUrl,
       },
       label: {
         type: 'plain_text',
@@ -180,6 +187,7 @@ export const configView: ModalView = {
       element: {
         type: 'plain_text_input',
         action_id: 'snowflakeWarehouse',
+        initial_value: config.snowflakeWarehouse,
       },
       label: {
         type: 'plain_text',
@@ -193,6 +201,7 @@ export const configView: ModalView = {
       element: {
         type: 'plain_text_input',
         action_id: 'snowflakeDatabase',
+        initial_value: config.snowflakeDatabase,
       },
       label: {
         type: 'plain_text',
@@ -219,6 +228,7 @@ export const configView: ModalView = {
           type: 'plain_text',
           text: 'https://demo.lightdash.com/projects/2014e038-ff4b-4761-ae6f-fbf551e7b468',
         },
+        initial_value: config.lightdashURL,
       },
       label: {
         type: 'plain_text',
@@ -246,4 +256,4 @@ export const configView: ModalView = {
     text: 'Submit',
   },
   callback_id: 'config_modal_submit',
-}
+})

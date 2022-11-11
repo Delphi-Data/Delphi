@@ -8,7 +8,7 @@ import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import { getInstallationStore } from './utils/getInstallationStore'
 import stripUser from './utils/stripUser'
-import { configView, homeView, getSQLView } from './views'
+import { getConfigView, homeView, getSQLView } from './views'
 
 type DownloadFileActionPayload = {
   channel: string
@@ -230,8 +230,9 @@ app.event('app_home_opened', async ({ payload, client }) => {
 app.action('open_config_modal', async ({ ack, body, client }) => {
   await ack()
   console.info('open_config_modal button clicked')
+  const config = body.team ? await configService.getAll(body.team.id) : {}
   client.views.open({
-    view: configView,
+    view: getConfigView(config),
     trigger_id: (body as { trigger_id: string }).trigger_id,
   })
 })
