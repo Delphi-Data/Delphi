@@ -162,9 +162,7 @@ app.event('app_mention', async ({ event, say, client }) => {
                     text: '⚡️ Lightdash',
                   },
                   action_id: 'view_in_lightdash',
-                  url: `${
-                    process.env.LIGHTDASH_URL
-                  }/sqlRunner?sql_runner=${encodeURI(
+                  url: `${config.lightdashURL}/sqlRunner?sql_runner=${encodeURI(
                     JSON.stringify({ sql: sqlQuery })
                   )}`,
                 },
