@@ -1,13 +1,13 @@
 import { App, ButtonClick, SectionBlock } from '@slack/bolt'
 import * as dotenv from 'dotenv'
-import configService, { Config } from './services/ConfigService'
 dotenv.config()
 
+import configService, { Config } from './services/ConfigService'
 import { getDataService } from './services/DataService'
 import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import stripUser from './utils/stripUser'
-import { configView, homeView, getSQLView, configErrorView } from './views'
+import { configView, homeView, getSQLView } from './views'
 
 type DownloadFileActionPayload = {
   channel: string
@@ -28,6 +28,14 @@ app.event('app_mention', async ({ event, say }) => {
   console.info(`query asked: ${text}`)
 
   const config = event.team ? await configService.getAll(event.team) : {}
+  if (!config || Object.keys(config).length === 0) {
+    await say({
+      text: ':racehorse: Hold your horses! You still need to configure Delphi. :racehorse: \n\nClick on my name, go to my "home" tab, and click the "configure" button to enter your information.',
+      channel: event.channel,
+      thread_ts: event.ts,
+    })
+    return
+  }
 
   try {
     const dataService = getDataService(config)
@@ -211,7 +219,6 @@ app.view('config_modal_submit', async ({ ack, view, payload }) => {
     config.forEach(([key, val]) => {
       configService.set(payload.team_id, key as keyof Config, val as string)
     })
-    console.info(JSON.stringify(config))
   } catch (error) {
     // TODO: show the user an error message. Rn it is telling me the trigger_id is invalid
     // app.client.views.push({

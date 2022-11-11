@@ -86,6 +86,7 @@ class RedisConfigService implements IConfigService {
   private client: RedisClientType
   private encrypter: Encrypter
   constructor(connectionString: string) {
+    console.info('initializing RedisConfigService')
     this.client = createClient({ url: connectionString })
     this.encrypter = new Encrypter(process.env.ENCRYPTION_KEY)
   }
