@@ -7,7 +7,7 @@ export type Config = {
   delphiAPIKey: string
   dbtCloudJobID: string
   dbtCloudServiceToken: string
-  lightdashUrl: string
+  lightdashURL: string
   snowflakeAccount: string
   snowflakeUsername: string
   snowflakeAccessUrl: string
@@ -71,7 +71,7 @@ class EnvConfigService implements IConfigService {
       delphiAPIKey: process.env.DELPHI_API_KEY,
       dbtCloudJobID: process.env.DBT_CLOUD_JOB_ID,
       dbtCloudServiceToken: process.env.DBT_CLOUD_SERVICE_TOKEN,
-      lightdashUrl: process.env.LIGHTDASH_URL,
+      lightdashURL: process.env.LIGHTDASH_URL,
       snowflakeAccount: process.env.SNOWFLAKE_ACCOUNT,
       snowflakeUsername: process.env.SNOWFLAKE_USERNAME,
       snowflakeAccessUrl: process.env.SNOWFLAKE_ACCESS_URL,

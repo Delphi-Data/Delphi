@@ -147,7 +147,7 @@ app.event('app_mention', async ({ event, say, client }) => {
             value: sqlQuery,
           },
         },
-        ...(config.lightdashUrl
+        ...(config.lightdashURL
           ? [
               {
                 type: 'section',
