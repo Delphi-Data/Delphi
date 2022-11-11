@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { createClient, RedisClientType } from 'redis'
 
+export const INSTALLATION_KEY = 'installation' as const
 export type Config = {
   delphiClientID: string
   delphiAPIKey: string
@@ -15,9 +16,10 @@ export type Config = {
   snowflakeSchema: string
   snowflakeWarehouse: string
   snowflakeRole: string
+  [INSTALLATION_KEY]: string
 }
 
-interface IConfigService {
+export interface IConfigService {
   set: (teamID: string, field: keyof Config, value: string) => Promise<void>
   get: (teamID: string, field: keyof Config) => Promise<string | undefined>
   getAll: (teamID: string) => Promise<Partial<Config>>
