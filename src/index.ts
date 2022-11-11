@@ -1,4 +1,4 @@
-import { App, ButtonClick, SectionBlock } from '@slack/bolt'
+import { App, ButtonClick, LogLevel, SectionBlock } from '@slack/bolt'
 import * as dotenv from 'dotenv'
 dotenv.config()
 
@@ -6,6 +6,7 @@ import configService, { Config } from './services/ConfigService'
 import { getDataService } from './services/DataService'
 import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
+import { getInstallationStore } from './utils/getInstallationStore'
 import stripUser from './utils/stripUser'
 import { configView, homeView, getSQLView } from './views'
 
@@ -17,13 +18,43 @@ type DownloadFileActionPayload = {
 
 // initialize app
 const app = new App({
-  signingSecret: process.env.SLACK_SIGNING_TOKEN,
-  token: process.env.SLACK_BOT_TOKEN,
-  socketMode: true,
-  appToken: process.env.SLACK_APP_TOKEN,
+  // Oauth
+  logLevel: LogLevel.DEBUG,
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  clientId: process.env.SLACK_CLIENT_ID,
+  clientSecret: process.env.SLACK_CLIENT_SECRET,
+  stateSecret: 'my-state-secret',
+  scopes: [
+    'app_mentions:read',
+    'channels:history',
+    'chat:write',
+    'files:write',
+    'groups:history',
+    'im:history',
+    'mpim:history',
+    'im:read',
+    'im:write',
+    'mpim:read',
+    'mpim:write',
+  ],
+  installerOptions: {
+    directInstall: true,
+  },
+  installationStore: getInstallationStore(configService),
+
+  // socket (should only be run locally)
+  token:
+    process.env.SOCKET_MODE === 'true'
+      ? process.env.SLACK_BOT_TOKEN
+      : undefined,
+  socketMode: process.env.SOCKET_MODE === 'true',
+  appToken:
+    process.env.SOCKET_MODE === 'true'
+      ? process.env.SLACK_APP_TOKEN
+      : undefined,
 })
 
-app.event('app_mention', async ({ event, say }) => {
+app.event('app_mention', async ({ event, say, client }) => {
   const text = stripUser(event.text)
   console.info(`query asked: ${text}`)
 
@@ -53,12 +84,12 @@ app.event('app_mention', async ({ event, say }) => {
     const { pretty, csv } = await formatQueryResult(sqlQueryResult)
 
     const [csvFile] = await Promise.all([
-      app.client.files.upload({
+      client.files.upload({
         content: csv,
         filename: `delphi_result_${event.ts}.csv`,
         filetype: 'csv',
       }),
-      app.client.files.upload({
+      client.files.upload({
         content: pretty,
         filename: `delphi_result_${event.ts}.txt`,
         filetype: 'txt',
@@ -161,10 +192,10 @@ app.event('app_mention', async ({ event, say }) => {
 })
 
 // Action listeners
-app.action('view_sql', async ({ ack, payload, body }) => {
+app.action('view_sql', async ({ ack, payload, body, client }) => {
   await ack()
   console.info('view_sql button clicked')
-  await app.client.views.open(
+  await client.views.open(
     getSQLView({
       triggerID: (body as { trigger_id: string }).trigger_id,
       sql: (payload as ButtonClick).value,
@@ -190,18 +221,18 @@ app.action('view_in_lightdash', async ({ ack }) => {
   console.info('view_in_lightdash button clicked')
 })
 
-app.event('app_home_opened', async ({ payload }) => {
+app.event('app_home_opened', async ({ payload, client }) => {
   console.info('app home opened')
-  app.client.views.publish({
+  client.views.publish({
     user_id: payload.user,
     view: homeView,
   })
 })
 
-app.action('open_config_modal', async ({ ack, body }) => {
+app.action('open_config_modal', async ({ ack, body, client }) => {
   await ack()
   console.info('open_config_modal button clicked')
-  app.client.views.open({
+  client.views.open({
     view: configView,
     trigger_id: (body as { trigger_id: string }).trigger_id,
   })
@@ -221,7 +252,7 @@ app.view('config_modal_submit', async ({ ack, view, payload }) => {
     })
   } catch (error) {
     // TODO: show the user an error message. Rn it is telling me the trigger_id is invalid
-    // app.client.views.push({
+    // client.views.push({
     //   trigger_id: (body as { trigger_id: string }).trigger_id,
     //   view: configErrorView,
     // })
