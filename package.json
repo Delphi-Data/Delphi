@@ -47,6 +47,7 @@
     "@bitauth/libauth": "^1.17.1",
     "@slack/bolt": "^3.12.1",
     "arquero": "^5.1.0",
+    "crypto": "^1.0.1",
     "dotenv": "^16.0.3",
     "node-fetch": "2",
     "redis": "^4.5.0",

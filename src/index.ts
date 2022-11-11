@@ -1,12 +1,13 @@
 import { App, ButtonClick, SectionBlock } from '@slack/bolt'
 import * as dotenv from 'dotenv'
-import configService from './services/ConfigService'
 dotenv.config()
 
+import configService, { Config } from './services/ConfigService'
 import { getDataService } from './services/DataService'
 import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import stripUser from './utils/stripUser'
+import { configView, homeView, getSQLView } from './views'
 
 type DownloadFileActionPayload = {
   channel: string
@@ -27,6 +28,14 @@ app.event('app_mention', async ({ event, say }) => {
   console.info(`query asked: ${text}`)
 
   const config = event.team ? await configService.getAll(event.team) : {}
+  if (!config || Object.keys(config).length === 0) {
+    await say({
+      text: ':racehorse: Hold your horses! You still need to configure Delphi. :racehorse: \n\nClick on my name, go to my "home" tab, and click the "configure" button to enter your information.',
+      channel: event.channel,
+      thread_ts: event.ts,
+    })
+    return
+  }
 
   try {
     const dataService = getDataService(config)
@@ -155,27 +164,12 @@ app.event('app_mention', async ({ event, say }) => {
 app.action('view_sql', async ({ ack, payload, body }) => {
   await ack()
   console.info('view_sql button clicked')
-  await app.client.views.open({
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore trigger_id is clearly in the body type; not sure why this is complaining
-    trigger_id: body.trigger_id,
-    view: {
-      title: {
-        type: 'plain_text',
-        text: 'View SQL',
-      },
-      type: 'modal',
-      blocks: [
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `\`\`\`${(payload as ButtonClick).value}\`\`\``,
-          },
-        },
-      ],
-    },
-  })
+  await app.client.views.open(
+    getSQLView({
+      triggerID: (body as { trigger_id: string }).trigger_id,
+      sql: (payload as ButtonClick).value,
+    })
+  )
 })
 
 app.action('download_csv', async ({ ack, say, payload }) => {
@@ -194,6 +188,45 @@ app.action('download_csv', async ({ ack, say, payload }) => {
 app.action('view_in_lightdash', async ({ ack }) => {
   await ack()
   console.info('view_in_lightdash button clicked')
+})
+
+app.event('app_home_opened', async ({ payload }) => {
+  console.info('app home opened')
+  app.client.views.publish({
+    user_id: payload.user,
+    view: homeView,
+  })
+})
+
+app.action('open_config_modal', async ({ ack, body }) => {
+  await ack()
+  console.info('open_config_modal button clicked')
+  app.client.views.open({
+    view: configView,
+    trigger_id: (body as { trigger_id: string }).trigger_id,
+  })
+})
+
+app.view('config_modal_submit', async ({ ack, view, payload }) => {
+  await ack()
+  console.info('config submitted')
+  try {
+    const values = view.state.values
+    const config = Object.entries(values).map(([key, val]) => [
+      key,
+      val[key].value,
+    ])
+    config.forEach(([key, val]) => {
+      val && configService.set(payload.team_id, key as keyof Config, val)
+    })
+  } catch (error) {
+    // TODO: show the user an error message. Rn it is telling me the trigger_id is invalid
+    // app.client.views.push({
+    //   trigger_id: (body as { trigger_id: string }).trigger_id,
+    //   view: configErrorView,
+    // })
+    console.error('Error submitting config', error)
+  }
 })
 
 // Start server
