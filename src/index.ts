@@ -1,13 +1,13 @@
 import { App, ButtonClick, SectionBlock } from '@slack/bolt'
 import * as dotenv from 'dotenv'
-import configService from './services/ConfigService'
+import configService, { Config } from './services/ConfigService'
 dotenv.config()
 
 import { getDataService } from './services/DataService'
 import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import stripUser from './utils/stripUser'
-import { configView, homeView, getSQLView } from './views'
+import { configView, homeView, getSQLView, configErrorView } from './views'
 
 type DownloadFileActionPayload = {
   channel: string
@@ -197,6 +197,29 @@ app.action('open_config_modal', async ({ ack, body }) => {
     view: configView,
     trigger_id: (body as { trigger_id: string }).trigger_id,
   })
+})
+
+app.view('config_modal_submit', async ({ ack, view, payload, body }) => {
+  await ack()
+  console.info('config submitted')
+  try {
+    const values = view.state.values
+    const config = Object.entries(values).map(([key, val]) => [
+      key,
+      val[key].value,
+    ])
+    config.forEach(([key, val]) => {
+      configService.set(payload.team_id, key as keyof Config, val as string)
+    })
+    console.info(JSON.stringify(config))
+  } catch (error) {
+    // TODO: show the user an error message. Rn it is telling me the trigger_id is invalid
+    // app.client.views.push({
+    //   trigger_id: (body as { trigger_id: string }).trigger_id,
+    //   view: configErrorView,
+    // })
+    console.error('Error submitting config', error)
+  }
 })
 
 // Start server

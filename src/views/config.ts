@@ -16,6 +16,7 @@ export const configView: ModalView = {
       },
     },
     {
+      block_id: 'delphi_client_id',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -29,6 +30,7 @@ export const configView: ModalView = {
     },
     {
       type: 'input',
+      block_id: 'delphi_api_key',
       element: {
         type: 'plain_text_input',
         action_id: 'delphi_api_key',
@@ -48,6 +50,7 @@ export const configView: ModalView = {
       },
     },
     {
+      block_id: 'dbt_cloud_job_id',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -60,6 +63,7 @@ export const configView: ModalView = {
       },
     },
     {
+      block_id: 'dbt_cloud_service_token',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -80,6 +84,7 @@ export const configView: ModalView = {
       },
     },
     {
+      block_id: 'snowflake_account',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -99,6 +104,7 @@ export const configView: ModalView = {
       type: 'divider',
     },
     {
+      block_id: 'snowflake_username',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -111,6 +117,7 @@ export const configView: ModalView = {
       },
     },
     {
+      block_id: 'snowflake_password',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -123,6 +130,7 @@ export const configView: ModalView = {
       },
     },
     {
+      block_id: 'snowflake_role',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -147,6 +155,7 @@ export const configView: ModalView = {
       type: 'divider',
     },
     {
+      block_id: 'snowflake_access_url',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -166,6 +175,7 @@ export const configView: ModalView = {
       type: 'divider',
     },
     {
+      block_id: 'snowflake_warehouse',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -178,6 +188,7 @@ export const configView: ModalView = {
       },
     },
     {
+      block_id: 'snowflake_database',
       type: 'input',
       element: {
         type: 'plain_text_input',
@@ -189,21 +200,24 @@ export const configView: ModalView = {
         emoji: true,
       },
     },
-    {
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'snowflake_schema',
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Schema',
-        emoji: true,
-      },
-    },
+    // Unclear if we need schema:
+    // {
+    //   block_id: 'snowflake_schema',
+    //   type: 'input',
+    //   element: {
+    //     type: 'plain_text_input',
+    //     action_id: 'snowflake_schema',
+    //   },
+    //   label: {
+    //     type: 'plain_text',
+    //     text: 'Schema',
+    //     emoji: true,
+    //   },
+    // },
   ],
   submit: {
     type: 'plain_text',
     text: 'Submit',
   },
+  callback_id: 'config_modal_submit',
 }
