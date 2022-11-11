@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { createClient, RedisClientType } from 'redis'
 
 export type Config = {
@@ -20,6 +21,39 @@ interface IConfigService {
   set: (teamID: string, field: keyof Config, value: string) => Promise<void>
   get: (teamID: string, field: keyof Config) => Promise<string | undefined>
   getAll: (teamID: string) => Promise<Partial<Config>>
+}
+
+class Encrypter {
+  private algorithm: string
+  private key: Buffer
+  constructor(encryptionKey: string | undefined) {
+    if (!encryptionKey) {
+      throw new Error('no encryption key provided')
+    }
+    this.algorithm = 'aes-256-cbc'
+    this.key = crypto.scryptSync(encryptionKey, 'salt', 24)
+  }
+
+  encrypt(clearText: string) {
+    const iv = crypto.randomBytes(16)
+    const cipher = crypto.createCipheriv(this.algorithm, this.key, iv)
+    const encrypted = cipher.update(clearText, 'utf8', 'hex')
+    return [
+      encrypted + cipher.final('hex'),
+      Buffer.from(iv).toString('hex'),
+    ].join('|')
+  }
+
+  decrypt(encryptedText: string) {
+    const [encrypted, iv] = encryptedText.split('|')
+    if (!iv) throw new Error('IV not found')
+    const decipher = crypto.createDecipheriv(
+      this.algorithm,
+      this.key,
+      Buffer.from(iv, 'hex')
+    )
+    return decipher.update(encrypted, 'hex', 'utf8') + decipher.final('utf8')
+  }
 }
 
 class EnvConfigService implements IConfigService {
@@ -50,13 +84,15 @@ class EnvConfigService implements IConfigService {
 
 class RedisConfigService implements IConfigService {
   private client: RedisClientType
+  private encrypter: Encrypter
   constructor(connectionString: string) {
     this.client = createClient({ url: connectionString })
+    this.encrypter = new Encrypter(process.env.ENCRYPTION_KEY)
   }
 
   async set(teamID: string, field: keyof Config, value: string) {
     await this.client.connect()
-    await this.client.hSet(teamID, field, value)
+    await this.client.hSet(teamID, field, this.encrypter.encrypt(value))
     await this.client.disconnect()
   }
 
@@ -64,13 +100,16 @@ class RedisConfigService implements IConfigService {
     await this.client.connect()
     const res = await this.client.hGet(teamID, field)
     await this.client.disconnect()
-    return res
+    return res ? this.encrypter.decrypt(res) : undefined
   }
 
   async getAll(teamID: string) {
     await this.client.connect()
     const res = await this.client.hGetAll(teamID)
     await this.client.disconnect()
+    Object.keys(res).forEach((key) => {
+      res[key] = this.encrypter.decrypt(res[key])
+    })
     return res
   }
 }

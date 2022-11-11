@@ -199,7 +199,7 @@ app.action('open_config_modal', async ({ ack, body }) => {
   })
 })
 
-app.view('config_modal_submit', async ({ ack, view, payload, body }) => {
+app.view('config_modal_submit', async ({ ack, view, payload }) => {
   await ack()
   console.info('config submitted')
   try {
