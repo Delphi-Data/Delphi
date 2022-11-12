@@ -2,6 +2,7 @@ import snowflake from 'snowflake-sdk'
 import { SnowflakeCredentials } from '../types/snowflake'
 import { promisify } from 'util'
 import { Config } from './ConfigService'
+import fetch, { Response } from 'node-fetch'
 
 export type QueryResult = Record<
   string,
@@ -66,10 +67,75 @@ class SnowflakeDataService implements IDataService {
   }
 }
 
+class LightdashDataService implements IDataService {
+  private baseURL: string
+  private projectID: string
+  private cookie?: string
+  constructor(
+    baseURL: string,
+    projectID: string,
+    email: string,
+    password: string
+  ) {
+    this.baseURL = baseURL
+    this.projectID = projectID
+    this.setCookie(email, password)
+  }
+
+  private parseCookies(response: Response) {
+    const raw = response.headers.raw()['set-cookie']
+    return raw
+      .map((entry) => {
+        const parts = entry.split(';')
+        const cookiePart = parts[0]
+        return cookiePart
+      })
+      .join(';')
+  }
+
+  private async setCookie(email: string, password: string) {
+    const res = await fetch(`${this.baseURL}/api/v1/login`, {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    })
+    this.cookie = this.parseCookies(res)
+  }
+
+  async runQuery(sql: string) {
+    const res = await fetch(
+      `${this.baseURL}/api/v1/projects/${this.projectID}/sqlQuery`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: this.cookie as string,
+        },
+        body: JSON.stringify({
+          sql,
+        }),
+      }
+    )
+    const data = (await res.json()) as { rows: QueryResult }
+    return data.rows
+  }
+}
+
 export const getDataService = (config: Partial<Config>): IDataService => {
-  return config.snowflakeAccount &&
-    config.snowflakeUsername &&
-    config.snowflakeAccessUrl
+  return config.lightdashAPIBaseURL &&
+    config.lightdashEmail &&
+    config.lightdashPassword &&
+    config.lightdashProjectID
+    ? new LightdashDataService(
+        config.lightdashAPIBaseURL,
+        config.lightdashProjectID,
+        config.lightdashEmail,
+        config.lightdashPassword
+      )
+    : config.snowflakeAccount &&
+      config.snowflakeUsername &&
+      config.snowflakeAccessUrl
     ? new SnowflakeDataService({
         account: config.snowflakeAccount,
         username: config.snowflakeUsername,
