@@ -47,12 +47,13 @@ class SnowflakeDataService implements IDataService {
     this.connectionOptions = credentials
   }
 
-  async runQuery(sqlText: string) {
+  async runQuery(sql: string) {
+    console.info(`Beginning SnowflakeDataService runQuery`, { sql })
     const connection = snowflake.createConnection(this.connectionOptions)
     await promisify(connection.connect)()
     return new Promise<QueryResult>((resolve, reject) => {
       connection.execute({
-        sqlText,
+        sqlText: sql,
         complete: (err, _, rows) => {
           if (err) {
             reject(err)
@@ -94,42 +95,53 @@ class LightdashDataService implements IDataService {
   }
 
   private async setCookie(email: string, password: string) {
-    const res = await fetch(`${this.baseURL}/api/v1/login`, {
-      method: 'POST',
-      body: JSON.stringify({
-        email,
-        password,
-      }),
-    })
-    this.cookie = this.parseCookies(res)
+    try {
+      const res = await fetch(`${this.baseURL}/api/v1/login`, {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      this.cookie = this.parseCookies(res)
+    } catch (error) {
+      console.error('[LightdashDataService] Could not set cookie', error)
+    }
   }
 
   async runQuery(sql: string) {
+    console.info(`Beginning LightdashDataService runQuery()`, { sql })
     const res = await fetch(
       `${this.baseURL}/api/v1/projects/${this.projectID}/sqlQuery`,
       {
         method: 'POST',
         headers: {
           cookie: this.cookie as string,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           sql,
         }),
       }
     )
-    const data = (await res.json()) as { rows: QueryResult }
-    return data.rows
+    const data = (await res.json()) as { results: { rows: QueryResult } }
+    return data.results?.rows
   }
 }
 
 export const getDataService = (config: Partial<Config>): IDataService => {
-  return config.lightdashAPIBaseURL &&
+  const [lightdashAPIBaseURL, lightdashProjectID] =
+    config.lightdashURL?.split('/projects/') || []
+  return lightdashAPIBaseURL &&
     config.lightdashEmail &&
     config.lightdashPassword &&
-    config.lightdashProjectID
+    lightdashProjectID
     ? new LightdashDataService(
-        config.lightdashAPIBaseURL,
-        config.lightdashProjectID,
+        lightdashAPIBaseURL,
+        lightdashProjectID,
         config.lightdashEmail,
         config.lightdashPassword
       )

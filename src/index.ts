@@ -1,4 +1,10 @@
-import { App, ButtonClick, LogLevel, SectionBlock } from '@slack/bolt'
+import {
+  App,
+  ButtonClick,
+  LogLevel,
+  SectionBlock,
+  StaticSelectAction,
+} from '@slack/bolt'
 import * as dotenv from 'dotenv'
 dotenv.config()
 
@@ -59,7 +65,7 @@ app.event('app_mention', async ({ event, say, client }) => {
   console.info(`query asked: ${text}`)
 
   const config = event.team ? await configService.getAll(event.team) : {}
-  if (!config || Object.keys(config).length === 0) {
+  if (!config || Object.keys(config).length <= 1) {
     await say({
       text: ':racehorse: Hold your horses! You still need to configure Delphi. :racehorse: \n\nClick on my name, go to my "home" tab, and click the "configure" button to enter your information.',
       channel: event.channel,
@@ -227,12 +233,18 @@ app.event('app_home_opened', async ({ payload, client }) => {
   })
 })
 
-app.action('open_config_modal', async ({ ack, body, client }) => {
+app.action('open_config_select', async ({ ack, body, payload, client }) => {
   await ack()
   console.info('open_config_modal button clicked')
+  console.info(JSON.stringify(payload))
   const config = body.team ? await configService.getAll(body.team.id) : {}
   client.views.open({
-    view: getConfigView(config),
+    view: getConfigView({
+      config,
+      type: (payload as StaticSelectAction).selected_option.value as
+        | 'dbt_cloud'
+        | 'lightdash',
+    }),
     trigger_id: (body as { trigger_id: string }).trigger_id,
   })
 })
