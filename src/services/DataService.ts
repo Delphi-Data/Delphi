@@ -2,6 +2,7 @@ import snowflake from 'snowflake-sdk'
 import { SnowflakeCredentials } from '../types/snowflake'
 import { promisify } from 'util'
 import { Config } from './ConfigService'
+import fetch, { Response } from 'node-fetch'
 
 export type QueryResult = Record<
   string,
@@ -46,12 +47,13 @@ class SnowflakeDataService implements IDataService {
     this.connectionOptions = credentials
   }
 
-  async runQuery(sqlText: string) {
+  async runQuery(sql: string) {
+    console.info(`Beginning SnowflakeDataService runQuery`, { sql })
     const connection = snowflake.createConnection(this.connectionOptions)
     await promisify(connection.connect)()
     return new Promise<QueryResult>((resolve, reject) => {
       connection.execute({
-        sqlText,
+        sqlText: sql,
         complete: (err, _, rows) => {
           if (err) {
             reject(err)
@@ -66,10 +68,86 @@ class SnowflakeDataService implements IDataService {
   }
 }
 
+class LightdashDataService implements IDataService {
+  private baseURL: string
+  private projectID: string
+  private cookie?: string
+  constructor(
+    baseURL: string,
+    projectID: string,
+    email: string,
+    password: string
+  ) {
+    this.baseURL = baseURL
+    this.projectID = projectID
+    this.setCookie(email, password)
+  }
+
+  private parseCookies(response: Response) {
+    const raw = response.headers.raw()['set-cookie']
+    return raw
+      .map((entry) => {
+        const parts = entry.split(';')
+        const cookiePart = parts[0]
+        return cookiePart
+      })
+      .join(';')
+  }
+
+  private async setCookie(email: string, password: string) {
+    try {
+      const res = await fetch(`${this.baseURL}/api/v1/login`, {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      this.cookie = this.parseCookies(res)
+    } catch (error) {
+      console.error('[LightdashDataService] Could not set cookie', error)
+    }
+  }
+
+  async runQuery(sql: string) {
+    console.info(`Beginning LightdashDataService runQuery()`, { sql })
+    const res = await fetch(
+      `${this.baseURL}/api/v1/projects/${this.projectID}/sqlQuery`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: this.cookie as string,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sql,
+        }),
+      }
+    )
+    const data = (await res.json()) as { results: { rows: QueryResult } }
+    return data.results?.rows
+  }
+}
+
 export const getDataService = (config: Partial<Config>): IDataService => {
-  return config.snowflakeAccount &&
-    config.snowflakeUsername &&
-    config.snowflakeAccessUrl
+  const [lightdashAPIBaseURL, lightdashProjectID] =
+    config.lightdashURL?.split('/projects/') || []
+  return lightdashAPIBaseURL &&
+    config.lightdashEmail &&
+    config.lightdashPassword &&
+    lightdashProjectID
+    ? new LightdashDataService(
+        lightdashAPIBaseURL,
+        lightdashProjectID,
+        config.lightdashEmail,
+        config.lightdashPassword
+      )
+    : config.snowflakeAccount &&
+      config.snowflakeUsername &&
+      config.snowflakeAccessUrl
     ? new SnowflakeDataService({
         account: config.snowflakeAccount,
         username: config.snowflakeUsername,

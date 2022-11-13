@@ -1,7 +1,12 @@
-import { ModalView } from '@slack/bolt'
+import { Block, KnownBlock, ModalView } from '@slack/bolt'
 import { Config } from '../services/ConfigService'
 
-export const getConfigView = (config: Partial<Config>): ModalView => ({
+type Params = {
+  config: Partial<Config>
+  type: 'dbt_cloud' | 'lightdash'
+}
+
+export const getConfigView = ({ config, type }: Params): ModalView => ({
   type: 'modal',
   title: {
     type: 'plain_text',
@@ -78,164 +83,199 @@ export const getConfigView = (config: Partial<Config>): ModalView => ({
         emoji: true,
       },
     },
+    ...(type === 'dbt_cloud'
+      ? ([
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: 'Snowflake',
+              emoji: true,
+            },
+          },
+          {
+            block_id: 'snowflakeAccount',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'snowflakeAccount',
+              placeholder: {
+                type: 'plain_text',
+                text: 'cib42085.us-east-1',
+              },
+              initial_value: config.snowflakeAccount,
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Account',
+              emoji: false,
+            },
+          },
+          {
+            type: 'divider',
+          },
+          {
+            block_id: 'snowflakeUsername',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'snowflakeUsername',
+              initial_value: config.snowflakeUsername,
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Username',
+              emoji: true,
+            },
+          },
+          {
+            block_id: 'snowflakePassword',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'snowflakePassword',
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Password',
+              emoji: true,
+            },
+          },
+          {
+            block_id: 'snowflakeRole',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'snowflakeRole',
+              initial_value: config.snowflakeRole,
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Role',
+              emoji: true,
+            },
+          },
+          {
+            type: 'context',
+            elements: [
+              {
+                type: 'mrkdwn',
+                text: 'Tip: use a user and role with read-only permissions. Delphi will _never_ attempt to write to your data warehouse.',
+              },
+            ],
+          },
+          {
+            type: 'divider',
+          },
+          {
+            block_id: 'snowflakeAccessUrl',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'snowflakeAccessUrl',
+              placeholder: {
+                type: 'plain_text',
+                text: 'https://eagle-hqya7.proxy.cloud.getdbt.com',
+              },
+              initial_value: config.snowflakeAccessUrl,
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Access URL (dbt Cloud Proxy URL)',
+              emoji: true,
+            },
+          },
+          {
+            type: 'divider',
+          },
+          {
+            block_id: 'snowflakeWarehouse',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'snowflakeWarehouse',
+              initial_value: config.snowflakeWarehouse,
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Warehouse',
+              emoji: true,
+            },
+          },
+          {
+            block_id: 'snowflakeDatabase',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'snowflakeDatabase',
+              initial_value: config.snowflakeDatabase,
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Database',
+              emoji: true,
+            },
+          },
+        ] as (Block | KnownBlock)[])
+      : []),
     {
       type: 'header',
       text: {
         type: 'plain_text',
-        text: 'Snowflake',
-        emoji: true,
-      },
-    },
-    {
-      block_id: 'snowflakeAccount',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'snowflakeAccount',
-        placeholder: {
-          type: 'plain_text',
-          text: 'cib42085.us-east-1',
-        },
-        initial_value: config.snowflakeAccount,
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Account',
-        emoji: false,
-      },
-    },
-    {
-      type: 'divider',
-    },
-    {
-      block_id: 'snowflakeUsername',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'snowflakeUsername',
-        initial_value: config.snowflakeUsername,
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Username',
-        emoji: true,
-      },
-    },
-    {
-      block_id: 'snowflakePassword',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'snowflakePassword',
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Password',
-        emoji: true,
-      },
-    },
-    {
-      block_id: 'snowflakeRole',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'snowflakeRole',
-        initial_value: config.snowflakeRole,
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Role',
-        emoji: true,
-      },
-    },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: 'Tip: use a user and role with read-only permissions. Delphi will _never_ attempt to write to your data warehouse.',
-        },
-      ],
-    },
-    {
-      type: 'divider',
-    },
-    {
-      block_id: 'snowflakeAccessUrl',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'snowflakeAccessUrl',
-        placeholder: {
-          type: 'plain_text',
-          text: 'https://eagle-hqya7.proxy.cloud.getdbt.com',
-        },
-        initial_value: config.snowflakeAccessUrl,
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Access URL (dbt Cloud Proxy URL)',
-        emoji: true,
-      },
-    },
-    {
-      type: 'divider',
-    },
-    {
-      block_id: 'snowflakeWarehouse',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'snowflakeWarehouse',
-        initial_value: config.snowflakeWarehouse,
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Warehouse',
-        emoji: true,
-      },
-    },
-    {
-      block_id: 'snowflakeDatabase',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'snowflakeDatabase',
-        initial_value: config.snowflakeDatabase,
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Database',
-        emoji: true,
-      },
-    },
-    {
-      type: 'header',
-      text: {
-        type: 'plain_text',
-        text: 'Snowflake',
+        text: ':zap: Lightdash',
         emoji: true,
       },
     },
     {
       block_id: 'lightdashURL',
       type: 'input',
-      optional: true,
+      optional: type !== 'lightdash',
       element: {
         type: 'plain_text_input',
         action_id: 'lightdashURL',
         placeholder: {
           type: 'plain_text',
-          text: 'https://demo.lightdash.com/projects/2014e038-ff4b-4761-ae6f-fbf551e7b468',
+          text: 'https://app.lightdash.cloud/projects/8cf007dd-8999-4add-a3ca-92fc8d4c6ace',
         },
         initial_value: config.lightdashURL,
       },
       label: {
         type: 'plain_text',
-        text: 'Lightdash URL (including project)',
+        text: 'Lightdash Project URL',
         emoji: true,
       },
     },
+    ...(type === 'lightdash'
+      ? ([
+          {
+            block_id: 'lightdashEmail',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'lightdashEmail',
+              initial_value: config.lightdashEmail,
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Lightdash Email',
+              emoji: true,
+            },
+          },
+          {
+            block_id: 'lightdashPassword',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'lightdashPassword',
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Lightdash Password',
+              emoji: true,
+            },
+          },
+        ] as (Block | KnownBlock)[])
+      : []),
     // Unclear if we need schema:
     // {
     //   block_id: 'snowflake_schema',

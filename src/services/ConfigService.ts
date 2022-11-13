@@ -16,6 +16,10 @@ export type Config = {
   snowflakeSchema: string
   snowflakeWarehouse: string
   snowflakeRole: string
+  lightdashAPIBaseURL: string
+  lightdashProjectID: string
+  lightdashEmail: string
+  lightdashPassword: string
   [INSTALLATION_KEY]: string
 }
 

@@ -4,19 +4,34 @@ export const homeView: HomeView = {
   type: 'home',
   blocks: [
     {
-      type: 'section',
-      text: {
+      type: 'input',
+      label: {
         type: 'plain_text',
-        text: 'Configure Delphi',
+        text: 'Select connection type',
       },
-      accessory: {
-        type: 'button',
-        text: {
-          type: 'plain_text',
-          text: 'Configure',
-        },
-        action_id: 'open_config_modal',
+      element: {
+        type: 'static_select',
+        options: [
+          {
+            text: {
+              type: 'plain_text',
+              text: 'dbt Cloud Semantic Layer',
+            },
+            value: 'dbt_cloud',
+          },
+          {
+            text: {
+              type: 'plain_text',
+              text: 'Lightdash',
+            },
+            value: 'lightdash',
+          },
+        ],
+        action_id: 'open_config_select',
       },
+      dispatch_action: true,
+      block_id: 'select_connection',
     },
   ],
+  callback_id: 'config_type_selected',
 }
