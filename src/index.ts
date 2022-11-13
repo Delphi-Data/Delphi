@@ -236,7 +236,6 @@ app.event('app_home_opened', async ({ payload, client }) => {
 app.action('open_config_select', async ({ ack, body, payload, client }) => {
   await ack()
   console.info('open_config_modal button clicked')
-  console.info(JSON.stringify(payload))
   const config = body.team ? await configService.getAll(body.team.id) : {}
   client.views.open({
     view: getConfigView({
