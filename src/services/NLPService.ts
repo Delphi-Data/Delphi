@@ -6,6 +6,7 @@ type NLQToSQLParams = {
   text: string
   jobId: string
   serviceToken: string
+  metrics?: Record<string, string | string[]>[]
 }
 
 type GetAnswerParams = {
@@ -43,7 +44,7 @@ class HermesNLPService implements NLPService {
     this.apiClientId = params.apiClientId
     this.apiKey = params.apiKey
   }
-  async nlqToSQL({ text, jobId, serviceToken }: NLQToSQLParams) {
+  async nlqToSQL({ text, jobId, metrics, serviceToken }: NLQToSQLParams) {
     const res = await fetch(`${this.apiBaseUrl}/dbt-sql-query`, {
       method: 'POST',
       headers: {
@@ -51,7 +52,7 @@ class HermesNLPService implements NLPService {
         'X-CLIENT-ID': this.apiClientId as string,
         'X-API-KEY': this.apiKey as string,
       },
-      body: JSON.stringify({ query: text, jobId, serviceToken }),
+      body: JSON.stringify({ query: text, jobId, metrics, serviceToken }),
     })
     const { dbtSQLQuery } = (await res.json()) as {
       readonly dbtSQLQuery: string

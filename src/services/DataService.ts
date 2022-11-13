@@ -11,9 +11,12 @@ export type QueryResult = Record<
 
 interface IDataService {
   readonly runQuery: (sql: string) => Promise<QueryResult>
+  readonly type: 'mock' | 'snowflake' | 'lightdash'
 }
+export type ILightdashDataService = LightdashDataService
 
 class MockDataService implements IDataService {
+  type = 'mock' as const
   runQuery() {
     return Promise.resolve([
       {
@@ -43,6 +46,7 @@ class MockDataService implements IDataService {
 
 class SnowflakeDataService implements IDataService {
   private readonly connectionOptions: SnowflakeCredentials
+  type = 'snowflake' as const
   constructor(credentials: SnowflakeCredentials) {
     this.connectionOptions = credentials
   }
@@ -72,15 +76,10 @@ class LightdashDataService implements IDataService {
   private baseURL: string
   private projectID: string
   private cookie?: string
-  constructor(
-    baseURL: string,
-    projectID: string,
-    email: string,
-    password: string
-  ) {
+  type = 'lightdash' as const
+  constructor(baseURL: string, projectID: string) {
     this.baseURL = baseURL
     this.projectID = projectID
-    this.setCookie(email, password)
   }
 
   private parseCookies(response: Response) {
@@ -112,6 +111,27 @@ class LightdashDataService implements IDataService {
     }
   }
 
+  async getMetrics(): Promise<Record<string, string | string[]>[]> {
+    console.info(`[LightdashDataService] beginning getMetrics() call`)
+    const res = await fetch(
+      `${this.baseURL}/api/v1/projects/${this.projectID}/integrations/dbt-cloud/metrics`,
+      {
+        method: 'GET',
+        headers: {
+          cookie: this.cookie as string,
+        },
+      }
+    )
+    const metrics = (
+      (await res.json()) as {
+        results: { metrics: Record<string, string | string[]>[] }
+      }
+    ).results.metrics
+    metrics?.forEach((metric) => delete metric.uniqueId) // codex tries to use `uniqueID` instead of `name` in the SQL it generates if we include this
+    console.info(`[LightdashDataService] found metrics`, metrics)
+    return metrics
+  }
+
   async runQuery(sql: string) {
     console.info(`Beginning LightdashDataService runQuery()`, { sql })
     const res = await fetch(
@@ -130,16 +150,29 @@ class LightdashDataService implements IDataService {
     const data = (await res.json()) as { results: { rows: QueryResult } }
     return data.results?.rows
   }
+
+  static async fetchLightdashDataService(
+    baseURL: string,
+    projectID: string,
+    email: string,
+    password: string
+  ): Promise<LightdashDataService> {
+    const lightdashDataService = new LightdashDataService(baseURL, projectID)
+    await lightdashDataService.setCookie(email, password)
+    return lightdashDataService
+  }
 }
 
-export const getDataService = (config: Partial<Config>): IDataService => {
+export const getDataService = async (
+  config: Partial<Config>
+): Promise<IDataService> => {
   const [lightdashAPIBaseURL, lightdashProjectID] =
     config.lightdashURL?.split('/projects/') || []
   return lightdashAPIBaseURL &&
     config.lightdashEmail &&
     config.lightdashPassword &&
     lightdashProjectID
-    ? new LightdashDataService(
+    ? await LightdashDataService.fetchLightdashDataService(
         lightdashAPIBaseURL,
         lightdashProjectID,
         config.lightdashEmail,

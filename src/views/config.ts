@@ -48,43 +48,43 @@ export const getConfigView = ({ config, type }: Params): ModalView => ({
         emoji: true,
       },
     },
-    {
-      type: 'header',
-      text: {
-        type: 'plain_text',
-        text: 'dbt Cloud',
-        emoji: true,
-      },
-    },
-    {
-      block_id: 'dbtCloudJobID',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'dbtCloudJobID',
-        initial_value: config.dbtCloudJobID,
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Job ID',
-        emoji: true,
-      },
-    },
-    {
-      block_id: 'dbtCloudServiceToken',
-      type: 'input',
-      element: {
-        type: 'plain_text_input',
-        action_id: 'dbtCloudServiceToken',
-      },
-      label: {
-        type: 'plain_text',
-        text: 'Service Token',
-        emoji: true,
-      },
-    },
     ...(type === 'dbt_cloud'
       ? ([
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: 'dbt Cloud',
+              emoji: true,
+            },
+          },
+          {
+            block_id: 'dbtCloudJobID',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'dbtCloudJobID',
+              initial_value: config.dbtCloudJobID,
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Job ID',
+              emoji: true,
+            },
+          },
+          {
+            block_id: 'dbtCloudServiceToken',
+            type: 'input',
+            element: {
+              type: 'plain_text_input',
+              action_id: 'dbtCloudServiceToken',
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Service Token',
+              emoji: true,
+            },
+          },
           {
             type: 'header',
             text: {

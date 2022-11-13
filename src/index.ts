@@ -9,7 +9,7 @@ import * as dotenv from 'dotenv'
 dotenv.config()
 
 import configService, { Config } from './services/ConfigService'
-import { getDataService } from './services/DataService'
+import { getDataService, ILightdashDataService } from './services/DataService'
 import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import { getInstallationStore } from './utils/getInstallationStore'
@@ -75,12 +75,17 @@ app.event('app_mention', async ({ event, say, client }) => {
   }
 
   try {
-    const dataService = getDataService(config)
+    const dataService = await getDataService(config)
     const nlpService = getNLPService(config)
 
     // Get query
+    const metrics =
+      dataService.type === 'lightdash'
+        ? await (dataService as ILightdashDataService).getMetrics() // TODO: put this in Redis but only persist for a short time (and/or let the user refresh?)
+        : undefined
     const sqlQuery = await nlpService.nlqToSQL({
       text,
+      metrics,
       jobId: config.dbtCloudJobID as string,
       serviceToken: config.dbtCloudServiceToken as string,
     })
