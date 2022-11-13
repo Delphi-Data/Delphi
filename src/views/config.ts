@@ -17,7 +17,7 @@ export const getConfigView = ({ config, type }: Params): ModalView => ({
       type: 'header',
       text: {
         type: 'plain_text',
-        text: 'Delphi',
+        text: ':robot_face: Delphi',
         emoji: true,
       },
     },
@@ -54,7 +54,7 @@ export const getConfigView = ({ config, type }: Params): ModalView => ({
             type: 'header',
             text: {
               type: 'plain_text',
-              text: 'dbt Cloud',
+              text: ':cloud: dbt Cloud',
               emoji: true,
             },
           },
@@ -89,7 +89,7 @@ export const getConfigView = ({ config, type }: Params): ModalView => ({
             type: 'header',
             text: {
               type: 'plain_text',
-              text: 'Snowflake',
+              text: ':snowflake: Snowflake',
               emoji: true,
             },
           },
