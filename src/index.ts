@@ -6,6 +6,7 @@ import {
   StaticSelectAction,
 } from '@slack/bolt'
 import * as dotenv from 'dotenv'
+import { DEMO_TEAM_ID } from './constants'
 dotenv.config()
 
 import configService, { Config } from './services/ConfigService'
@@ -64,14 +65,25 @@ app.event('app_mention', async ({ event, say, client }) => {
   const text = stripUser(event.text)
   console.info(`query asked: ${text}`)
 
-  const config = event.team ? await configService.getAll(event.team) : {}
+  let config = event.team ? await configService.getAll(event.team) : {}
   if (!config || Object.keys(config).length <= 1) {
-    await say({
-      text: ':racehorse: Hold your horses! You still need to configure Delphi. :racehorse: \n\nClick on my name, go to my "home" tab, and click the "configure" button to enter your information.',
-      channel: event.channel,
-      thread_ts: event.ts,
-    })
-    return
+    if (process.env.DEFAULT_TO_DEMO === 'true') {
+      config = await configService.getAll(DEMO_TEAM_ID)
+      console.info(`Using demo data set`)
+      await say({
+        text: 'Using demo data set. If you want to use your own data, click on my name, go to my "home" tab, and select a connection type.',
+        channel: event.channel,
+        thread_ts: event.ts,
+      })
+    } else {
+      console.info(`No config found. Exiting.`)
+      await say({
+        text: ':racehorse: Hold your horses! You still need to configure Delphi. :racehorse: \n\nClick on my name, go to my "home" tab, and select a connection type.',
+        channel: event.channel,
+        thread_ts: event.ts,
+      })
+      return
+    }
   }
 
   try {
