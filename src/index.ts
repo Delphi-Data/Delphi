@@ -15,7 +15,13 @@ import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import { getInstallationStore } from './utils/getInstallationStore'
 import stripUser from './utils/stripUser'
-import { getConfigView, homeView, getMetricsView, getSQLView } from './views'
+import {
+  getConfigView,
+  homeView,
+  getMetricsView,
+  getSQLView,
+  configSuccessView,
+} from './views'
 
 type DownloadFileActionPayload = {
   channel: string
@@ -283,27 +289,36 @@ app.action('open_config_select', async ({ ack, body, payload, client }) => {
   })
 })
 
-app.view('config_modal_submit', async ({ ack, view, payload }) => {
-  await ack()
-  console.info('config submitted')
-  try {
-    const values = view.state.values
-    const config = Object.entries(values).map(([key, val]) => [
-      key,
-      val[key].value,
-    ])
-    config.forEach(([key, val]) => {
-      val && configService.set(payload.team_id, key as keyof Config, val)
+app.view(
+  'config_modal_submit',
+  async ({ ack, view, payload, client, body }) => {
+    await ack()
+    console.info('config submitted')
+    try {
+      const values = view.state.values
+      const config = Object.entries(values).map(([key, val]) => [
+        key,
+        val[key].value,
+      ])
+      config.forEach(([key, val]) => {
+        val && configService.set(payload.team_id, key as keyof Config, val)
+      })
+    } catch (error) {
+      // TODO: show the user an error message. Rn it is telling me the trigger_id is invalid
+      // client.views.push({
+      //   trigger_id: (body as { trigger_id: string }).trigger_id,
+      //   view: configErrorView,
+      // })
+      console.error('Error submitting config', error)
+      return
+    }
+    console.log(`Successfully submitted config`)
+    client.views.open({
+      view: configSuccessView,
+      trigger_id: (body as { trigger_id: string }).trigger_id,
     })
-  } catch (error) {
-    // TODO: show the user an error message. Rn it is telling me the trigger_id is invalid
-    // client.views.push({
-    //   trigger_id: (body as { trigger_id: string }).trigger_id,
-    //   view: configErrorView,
-    // })
-    console.error('Error submitting config', error)
   }
-})
+)
 
 app.action('see_metrics', async ({ ack, body, client }) => {
   await ack()
