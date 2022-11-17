@@ -1,4 +1,5 @@
 export * from './config'
 export * from './configError'
 export * from './home'
+export * from './metrics'
 export * from './sql'

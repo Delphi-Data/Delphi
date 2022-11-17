@@ -15,7 +15,7 @@ import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import { getInstallationStore } from './utils/getInstallationStore'
 import stripUser from './utils/stripUser'
-import { getConfigView, homeView, getSQLView } from './views'
+import { getConfigView, homeView, getMetricsView, getSQLView } from './views'
 
 type DownloadFileActionPayload = {
   channel: string
@@ -72,6 +72,24 @@ app.event('app_mention', async ({ event, say, client }) => {
       console.info(`Using demo data set`)
       await say({
         text: 'Using demo data set. If you want to use your own data, click on my name, go to my "home" tab, and select a connection type.',
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: 'Using demo data set. If you want to use your own data, click on my name, go to my "home" tab, and select a connection type.',
+            },
+            accessory: {
+              type: 'button',
+              style: 'primary',
+              text: {
+                type: 'plain_text',
+                text: 'See Available Metrics',
+              },
+              action_id: 'see_metrics',
+            },
+          },
+        ],
         channel: event.channel,
         thread_ts: event.ts,
       })
@@ -285,6 +303,16 @@ app.view('config_modal_submit', async ({ ack, view, payload }) => {
     // })
     console.error('Error submitting config', error)
   }
+})
+
+app.action('see_metrics', async ({ ack, body, client }) => {
+  await ack()
+  console.info('see_metrics button clicked')
+  const config = await configService.getAll(DEMO_TEAM_ID)
+  client.views.open({
+    view: await getMetricsView(config),
+    trigger_id: (body as { trigger_id: string }).trigger_id,
+  })
 })
 
 // Start server
