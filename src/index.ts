@@ -6,6 +6,7 @@ import {
   StaticSelectAction,
 } from '@slack/bolt'
 import * as dotenv from 'dotenv'
+import { DEMO_TEAM_ID } from './constants'
 dotenv.config()
 
 import configService, { Config } from './services/ConfigService'
@@ -14,7 +15,7 @@ import { getNLPService } from './services/NLPService'
 import { formatQueryResult } from './utils/formatQueryResult'
 import { getInstallationStore } from './utils/getInstallationStore'
 import stripUser from './utils/stripUser'
-import { getConfigView, homeView, getSQLView } from './views'
+import { getConfigView, homeView, getMetricsView, getSQLView } from './views'
 
 type DownloadFileActionPayload = {
   channel: string
@@ -64,14 +65,43 @@ app.event('app_mention', async ({ event, say, client }) => {
   const text = stripUser(event.text)
   console.info(`query asked: ${text}`)
 
-  const config = event.team ? await configService.getAll(event.team) : {}
+  let config = event.team ? await configService.getAll(event.team) : {}
   if (!config || Object.keys(config).length <= 1) {
-    await say({
-      text: ':racehorse: Hold your horses! You still need to configure Delphi. :racehorse: \n\nClick on my name, go to my "home" tab, and click the "configure" button to enter your information.',
-      channel: event.channel,
-      thread_ts: event.ts,
-    })
-    return
+    if (process.env.DEFAULT_TO_DEMO === 'true') {
+      config = await configService.getAll(DEMO_TEAM_ID)
+      console.info(`Using demo data set`)
+      await say({
+        text: 'Using demo data set. If you want to use your own data, click on my name, go to my "home" tab, and select a connection type.',
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: 'Using demo data set. If you want to use your own data, click on my name, go to my "home" tab, and select a connection type.',
+            },
+            accessory: {
+              type: 'button',
+              style: 'primary',
+              text: {
+                type: 'plain_text',
+                text: 'See Available Metrics',
+              },
+              action_id: 'see_metrics',
+            },
+          },
+        ],
+        channel: event.channel,
+        thread_ts: event.ts,
+      })
+    } else {
+      console.info(`No config found. Exiting.`)
+      await say({
+        text: ':racehorse: Hold your horses! You still need to configure Delphi. :racehorse: \n\nClick on my name, go to my "home" tab, and select a connection type.',
+        channel: event.channel,
+        thread_ts: event.ts,
+      })
+      return
+    }
   }
 
   try {
@@ -273,6 +303,16 @@ app.view('config_modal_submit', async ({ ack, view, payload }) => {
     // })
     console.error('Error submitting config', error)
   }
+})
+
+app.action('see_metrics', async ({ ack, body, client }) => {
+  await ack()
+  console.info('see_metrics button clicked')
+  const config = await configService.getAll(DEMO_TEAM_ID)
+  client.views.open({
+    view: await getMetricsView(config),
+    trigger_id: (body as { trigger_id: string }).trigger_id,
+  })
 })
 
 // Start server

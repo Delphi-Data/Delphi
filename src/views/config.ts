@@ -48,6 +48,15 @@ export const getConfigView = ({ config, type }: Params): ModalView => ({
         emoji: true,
       },
     },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: "Don't have a client ID and API key yet? Reach out to Michael Irvine on the dbt or Locally Optimistic Slacks, or email michael@sightglassdata.com",
+        },
+      ],
+    },
     ...(type === 'dbt_cloud'
       ? ([
           {
