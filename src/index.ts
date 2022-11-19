@@ -1,7 +1,10 @@
 import {
+  AllMiddlewareArgs,
   App,
+  AppMentionEvent,
   ButtonClick,
   LogLevel,
+  SayFn,
   SectionBlock,
   StaticSelectAction,
 } from '@slack/bolt'
@@ -52,6 +55,32 @@ const app = new App({
   ],
   installerOptions: {
     directInstall: true,
+    callbackOptions: {
+      success: (installation, _installOptions, _req, res) => {
+        // Display a success page or redirect back into Slack
+        //
+        // Learn how to redirect into Slack:
+        // https://github.com/slackapi/node-slack-sdk/blob/main/packages/oauth/src/index.ts#L527-L552
+        res.end()
+
+        // Send a welcome message to the user as a DM
+        app.client.chat.postMessage({
+          token: installation?.bot?.token,
+          channel: installation.user.id,
+          text: ":wave: Hi! I'm Delphi",
+        })
+        app.client.chat.postMessage({
+          token: installation?.bot?.token,
+          channel: installation.user.id,
+          text: ':speech_balloon: To get started, message me with a question like "how much money did we make from gift cards last week?',
+        })
+        app.client.chat.postMessage({
+          token: installation?.bot?.token,
+          channel: installation.user.id,
+          text: ':partying_face: You can also add me to a channel so everyone can ask me questions by tagging "@Delphi"',
+        })
+      },
+    },
   },
   installationStore: getInstallationStore(configService),
 
@@ -67,7 +96,15 @@ const app = new App({
       : undefined,
 })
 
-app.event('app_mention', async ({ event, say, client }) => {
+const handleMessage = async ({
+  event,
+  say,
+  client,
+}: {
+  event: AppMentionEvent
+  say: SayFn
+  client: AllMiddlewareArgs['client']
+}) => {
   const text = stripUser(event.text)
   console.info(`query asked: ${text}`)
 
@@ -234,6 +271,21 @@ app.event('app_mention', async ({ event, say, client }) => {
     })
     console.error(`error running query`, error)
   }
+}
+
+app.event('message', async ({ event, say, client }) => {
+  if (event.channel_type === 'im') {
+    console.info('direct message received')
+    await handleMessage({
+      event: event as unknown as AppMentionEvent, // this is unsafe but it works. I think the TS types for the Slack Bolt API are outdated
+      say,
+      client,
+    })
+  }
+})
+app.event('app_mention', async ({ event, say, client }) => {
+  console.info('app mentioned in channel')
+  await handleMessage({ event, say, client })
 })
 
 // Action listeners
