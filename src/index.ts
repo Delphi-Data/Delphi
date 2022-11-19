@@ -382,16 +382,6 @@ app.action('see_metrics', async ({ ack, body, client }) => {
   })
 })
 
-app.event('channel_joined', async ({ event, client }) => {
-  console.info('channel joined')
-  await client.chat.postMessage({
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    channel: event.channel,
-    text: "Hi! I'm Delphi",
-  })
-})
-
 // Start server
 ;(async () => {
   await app.start(process.env.PORT || 3000)
