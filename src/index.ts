@@ -64,21 +64,27 @@ const app = new App({
         res.end()
 
         // Send a welcome message to the user as a DM
-        app.client.chat.postMessage({
-          token: installation?.bot?.token,
-          channel: installation.user.id,
-          text: ":wave: Hi! I'm Delphi",
-        })
-        app.client.chat.postMessage({
-          token: installation?.bot?.token,
-          channel: installation.user.id,
-          text: ':speech_balloon: To get started, message me with a question like "how much money did we make from gift cards last week?',
-        })
-        app.client.chat.postMessage({
-          token: installation?.bot?.token,
-          channel: installation.user.id,
-          text: ':partying_face: You can also add me to a channel so everyone can ask me questions by tagging "@Delphi"',
-        })
+        app.client.chat
+          .postMessage({
+            token: installation?.bot?.token,
+            channel: installation.user.id,
+            text: ":wave: Hi! I'm Delphi",
+          })
+          .then(() => {
+            app.client.chat
+              .postMessage({
+                token: installation?.bot?.token,
+                channel: installation.user.id,
+                text: ':speech_balloon: To get started, message me with a question like "how much money did we make from gift cards last week?',
+              })
+              .then(() => {
+                app.client.chat.postMessage({
+                  token: installation?.bot?.token,
+                  channel: installation.user.id,
+                  text: ':partying_face: You can also add me to a channel so everyone can ask me questions by tagging "@Delphi"',
+                })
+              })
+          })
       },
     },
   },
