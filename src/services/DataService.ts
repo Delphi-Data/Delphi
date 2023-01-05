@@ -211,10 +211,12 @@ class LightdashDataService
   }
 
   async runQuery({
+    question,
     table,
     dimensions,
     metrics,
   }: {
+    question: string
     table: string
     dimensions: string[]
     metrics: string[]
@@ -233,6 +235,7 @@ class LightdashDataService
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          question,
           dimensions,
           metrics,
         }),
