@@ -3,6 +3,7 @@ import { SnowflakeCredentials } from '../types/snowflake'
 import { promisify } from 'util'
 import { Config } from './ConfigService'
 import fetch, { Response } from 'node-fetch'
+import { LightdashCatalog, LightdashField } from '../types/lightdash'
 
 export type QueryResult = Record<
   string,
@@ -72,10 +73,10 @@ class SnowflakeDataService implements IDataService {
   }
 }
 
-class LightdashDataService implements IDataService {
-  private baseURL: string
-  private projectID: string
-  private cookie?: string
+class LightdashBaseDataService {
+  protected baseURL: string
+  protected projectID: string
+  protected cookie?: string
   type = 'lightdash' as const
   constructor(baseURL: string, projectID: string) {
     this.baseURL = baseURL
@@ -111,31 +112,26 @@ class LightdashDataService implements IDataService {
     }
   }
 
-  private async getDbtMetrics(): Promise<Record<string, string | string[]>[]> {
-    console.info(`[LightdashDataService] beginning getDbtMetrics() call`)
-    const res = await fetch(
-      `${this.baseURL}/api/v1/projects/${this.projectID}/integrations/dbt-cloud/metrics`,
-      {
-        method: 'GET',
-        headers: {
-          cookie: this.cookie as string,
-        },
-      }
-    )
-    const metrics = (
-      (await res.json()) as {
-        results: { metrics: Record<string, string | string[]>[] }
-      }
-    ).results.metrics
-    metrics?.forEach((metric) => delete metric.uniqueId) // codex tries to use `uniqueID` instead of `name` in the SQL it generates if we include this
-    console.info(`[LightdashDataService] found dbt metrics`, metrics)
-    return metrics
+  static async fetchLightdashDataService(
+    baseURL: string,
+    projectID: string,
+    email: string,
+    password: string
+  ): Promise<LightdashDataService | LightdashDbtDataService> {
+    const lightdashDataService = new LightdashDbtDataService(baseURL, projectID)
+    await lightdashDataService.setCookie(email, password)
+    return lightdashDataService
   }
+}
 
-  private async getLightdashMetrics(): Promise<{
-    dimensions: { name: string; description: string }[]
-    metrics: { name: string; description: string }[]
-  }> {
+class LightdashDataService
+  extends LightdashBaseDataService
+  implements IDataService
+{
+  constructor(baseURL: string, projectID: string) {
+    super(baseURL, projectID)
+  }
+  private async getLightdashMetricsAndDimensions(): Promise<LightdashCatalog> {
     console.info(`[LightdashDataService] beginning getLightdashMetrics() call`)
 
     // Get all available explores
@@ -164,8 +160,8 @@ class LightdashDataService implements IDataService {
     const explores = Object.keys(schema)
 
     // Iterate over explores to get available dimensions and metrics
-    const metrics = [] as { name: string; description: string }[]
-    const dimensions = [] as { name: string; description: string }[]
+    const metrics = [] as LightdashField[]
+    const dimensions = [] as LightdashField[]
     await Promise.all(
       explores.map(async (explore) => {
         const exploreRes = await fetch(
@@ -207,15 +203,84 @@ class LightdashDataService implements IDataService {
     return { metrics, dimensions }
   }
 
-  async getMetrics(): Promise<Record<string, string | string[]>[]> {
+  async getMetrics(): Promise<LightdashCatalog> {
     console.info(`[LightdashDataService] beginning getMetrics() call`)
+    const catalog = await this.getLightdashMetricsAndDimensions()
+    console.info(`[LightdashDataService] found metrics and dimensions`, catalog)
+    return catalog
+  }
+
+  async runQuery({
+    table,
+    dimensions,
+    metrics,
+  }: {
+    table: string
+    dimensions: string[]
+    metrics: string[]
+  }) {
+    console.info(`Beginning LightdashDataService runQuery()`, {
+      table,
+      dimensions,
+      metrics,
+    })
+    const res = await fetch(
+      `${this.baseURL}/api/v1/projects/${this.projectID}/explores/${table}/runQuery`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: this.cookie as string,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dimensions,
+          metrics,
+        }),
+      }
+    )
+    const data = (await res.json()) as { results: { rows: QueryResult } }
+    return data.results?.rows
+  }
+}
+
+class LightdashDbtDataService
+  extends LightdashBaseDataService
+  implements IDataService
+{
+  constructor(baseURL: string, projectID: string) {
+    super(baseURL, projectID)
+  }
+
+  private async getDbtMetrics(): Promise<Record<string, string | string[]>[]> {
+    console.info(`[LightdashDbtDataService] beginning getDbtMetrics() call`)
+    const res = await fetch(
+      `${this.baseURL}/api/v1/projects/${this.projectID}/integrations/dbt-cloud/metrics`,
+      {
+        method: 'GET',
+        headers: {
+          cookie: this.cookie as string,
+        },
+      }
+    )
+    const metrics = (
+      (await res.json()) as {
+        results: { metrics: Record<string, string | string[]>[] }
+      }
+    ).results.metrics
+    metrics?.forEach((metric) => delete metric.uniqueId) // codex tries to use `uniqueID` instead of `name` in the SQL it generates if we include this
+    console.info(`[LightdashDbtDataService] found dbt metrics`, metrics)
+    return metrics
+  }
+
+  async getMetrics(): Promise<Record<string, string | string[]>[]> {
+    console.info(`[LightdashDbtDataService] beginning getMetrics() call`)
     const metrics = await this.getDbtMetrics()
-    console.info(`[LightdashDataService] found metrics`, metrics)
+    console.info(`[LightdashDbtDataService] found metrics`, metrics)
     return metrics
   }
 
   async runQuery(sql: string) {
-    console.info(`Beginning LightdashDataService runQuery()`, { sql })
+    console.info(`Beginning LightdashDbtDataService runQuery()`, { sql })
     const res = await fetch(
       `${this.baseURL}/api/v1/projects/${this.projectID}/sqlQuery`,
       {
@@ -231,17 +296,6 @@ class LightdashDataService implements IDataService {
     )
     const data = (await res.json()) as { results: { rows: QueryResult } }
     return data.results?.rows
-  }
-
-  static async fetchLightdashDataService(
-    baseURL: string,
-    projectID: string,
-    email: string,
-    password: string
-  ): Promise<LightdashDataService> {
-    const lightdashDataService = new LightdashDataService(baseURL, projectID)
-    await lightdashDataService.setCookie(email, password)
-    return lightdashDataService
   }
 }
 
