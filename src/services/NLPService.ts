@@ -82,7 +82,7 @@ class HermesNLPService implements NLPService {
     dimensions,
     metrics,
   }: NLQToLightdashQueryParams): Promise<LightdashQuery> {
-    const res = await fetch(`${this.apiBaseUrl}/dbt-sql-query`, {
+    const res = await fetch(`${this.apiBaseUrl}/lightdash-query`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

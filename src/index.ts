@@ -161,13 +161,13 @@ const handleMessage = async ({
     // Get query
     const metrics =
       dataService.type === 'lightdash'
-        ? config.shouldUseLightdashSemanticLayer
+        ? config.shouldUseLightdashSemanticLayer === 'true'
           ? await (
               dataService as ILightdashDataService
             ).getMetricsAndDimensions()
           : await (dataService as ILightdashDataService).getMetrics() // TODO: put this in Redis but only persist for a short time (and/or let the user refresh?)
         : undefined
-    const query = await (config.shouldUseLightdashSemanticLayer
+    const query = await (config.shouldUseLightdashSemanticLayer === 'true'
       ? nlpService.nlqToLightdashQuery({
           question: text,
           ...(metrics as LightdashCatalog),
@@ -180,7 +180,8 @@ const handleMessage = async ({
         }))
 
     // Run query against data
-    const sqlQueryResult = await (config.shouldUseLightdashSemanticLayer
+    const sqlQueryResult = await (config.shouldUseLightdashSemanticLayer ===
+    'true'
       ? (dataService as ILightdashDataService).runQuery(query as LightdashQuery)
       : dataService.runSQLQuery(query as string))
     const { pretty, csv } = await formatQueryResult(sqlQueryResult)
@@ -264,11 +265,14 @@ const handleMessage = async ({
                     text: '⚡️ Lightdash',
                   },
                   action_id: 'view_in_lightdash',
-                  url: config.shouldUseLightdashSemanticLayer
-                    ? `${config.lightdashURL}/tables/`
-                    : `${config.lightdashURL}/sqlRunner?sql_runner=${encodeURI(
-                        JSON.stringify({ sql: query })
-                      )}`,
+                  url:
+                    config.shouldUseLightdashSemanticLayer === 'true'
+                      ? `${config.lightdashURL}/tables/`
+                      : `${
+                          config.lightdashURL
+                        }/sqlRunner?sql_runner=${encodeURI(
+                          JSON.stringify({ sql: query })
+                        )}`,
                 },
               } as SectionBlock,
             ]
@@ -370,7 +374,7 @@ app.view(
       const values = view.state.values
       const config = Object.entries(values).map(([key, val]) => [
         key,
-        val[key].value,
+        val[key].value ?? val[key].selected_option?.value,
       ])
       config.forEach(([key, val]) => {
         val && configService.set(payload.team_id, key as keyof Config, val)

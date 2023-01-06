@@ -295,19 +295,19 @@ export const getConfigView = ({ config, type }: Params): ModalView => ({
                     type: 'plain_text',
                     text: 'dbt Cloud Semantic Layer',
                   },
-                  value: 'option 1',
+                  value: 'false',
                 },
                 {
                   text: {
                     type: 'plain_text',
                     text: 'Lightdash Semantic Layer',
                   },
-                  value: 'option 2',
+                  value: 'true',
                 },
               ],
               initial_option: {
                 text: { type: 'plain_text', text: 'dbt Cloud Semantic Layer' },
-                value: 'option 1',
+                value: 'false',
               },
             },
             label: {

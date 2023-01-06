@@ -223,7 +223,8 @@ class LightdashDataService implements IDataService {
               .flatMap((table) => Object.values(table.metrics))
               .map((metric) => ({
                 name: metric.name,
-                description: metric.description,
+                // description: metric.description,
+                description: '',
                 table: metric.table,
                 explore,
               }))
@@ -235,7 +236,8 @@ class LightdashDataService implements IDataService {
               .flatMap((table) => Object.values(table.dimensions))
               .map((dimension) => ({
                 name: dimension.name,
-                description: dimension.description,
+                // description: dimension.description,
+                description: '',
                 table: dimension.table,
                 explore,
               }))
