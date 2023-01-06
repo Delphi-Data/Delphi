@@ -1,4 +1,5 @@
 import fetch from 'node-fetch'
+import { LightdashField, LightdashQuery } from '../types/lightdash'
 import { Config } from './ConfigService'
 import { QueryResult } from './DataService'
 
@@ -9,6 +10,12 @@ type NLQToSQLParams = {
   metrics?: Record<string, string | string[]>[]
 }
 
+type NLQToLightdashQueryParams = {
+  question: string
+  dimensions: LightdashField[]
+  metrics: LightdashField[]
+}
+
 type GetAnswerParams = {
   query: string
   data: QueryResult
@@ -16,6 +23,9 @@ type GetAnswerParams = {
 
 interface NLPService {
   readonly nlqToSQL: (params: NLQToSQLParams) => Promise<string>
+  readonly nlqToLightdashQuery: (
+    params: NLQToLightdashQueryParams
+  ) => Promise<LightdashQuery>
   readonly getAnswer: (params: GetAnswerParams) => Promise<string>
 }
 
@@ -24,6 +34,13 @@ class MockNLPService implements NLPService {
     return Promise.resolve(
       `SELECT * FROM some_ideal_clean_and_pristine.table_that_you_think_exists`
     )
+  }
+  nlqToLightdashQuery() {
+    return Promise.resolve({
+      explore: 'customers',
+      dimensions: ['customers_customer_id'],
+      metrics: ['customers_revenue'],
+    })
   }
   getAnswer() {
     return Promise.resolve(`The answer is no`)
@@ -58,6 +75,37 @@ class HermesNLPService implements NLPService {
       readonly dbtSQLQuery: string
     }
     return dbtSQLQuery
+  }
+
+  async nlqToLightdashQuery({
+    question,
+    dimensions,
+    metrics,
+  }: NLQToLightdashQueryParams): Promise<LightdashQuery> {
+    const res = await fetch(`${this.apiBaseUrl}/dbt-sql-query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CLIENT-ID': this.apiClientId as string,
+        'X-API-KEY': this.apiKey as string,
+      },
+      body: JSON.stringify({ question, dimensions, metrics }),
+    })
+    const { lightdashQuery } = (await res.json()) as {
+      readonly lightdashQuery: {
+        dimensions: Omit<LightdashField, 'description'>[]
+        metrics: Omit<LightdashField, 'description'>[]
+      }
+    }
+    return {
+      explore: lightdashQuery.dimensions[0].explore,
+      dimensions: lightdashQuery.dimensions.map(
+        (dimension) => `${dimension.table}_${dimension.name}`
+      ),
+      metrics: lightdashQuery.metrics.map(
+        (metric) => `${metric.table}_${metric.name}`
+      ),
+    }
   }
 
   async getAnswer({ query, data }: GetAnswerParams) {

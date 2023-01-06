@@ -15,6 +15,7 @@ dotenv.config()
 import configService, { Config } from './services/ConfigService'
 import { getDataService, ILightdashDataService } from './services/DataService'
 import { getNLPService } from './services/NLPService'
+import { LightdashCatalog, LightdashQuery } from './types/lightdash'
 import { formatQueryResult } from './utils/formatQueryResult'
 import { getInstallationStore } from './utils/getInstallationStore'
 import stripUser from './utils/stripUser'
@@ -160,17 +161,28 @@ const handleMessage = async ({
     // Get query
     const metrics =
       dataService.type === 'lightdash'
-        ? await (dataService as ILightdashDataService).getMetrics() // TODO: put this in Redis but only persist for a short time (and/or let the user refresh?)
+        ? config.shouldUseLightdashSemanticLayer
+          ? await (
+              dataService as ILightdashDataService
+            ).getMetricsAndDimensions()
+          : await (dataService as ILightdashDataService).getMetrics() // TODO: put this in Redis but only persist for a short time (and/or let the user refresh?)
         : undefined
-    const sqlQuery = await nlpService.nlqToSQL({
-      text,
-      metrics,
-      jobId: config.dbtCloudJobID as string,
-      serviceToken: config.dbtCloudServiceToken as string,
-    })
+    const query = await (config.shouldUseLightdashSemanticLayer
+      ? nlpService.nlqToLightdashQuery({
+          question: text,
+          ...(metrics as LightdashCatalog),
+        })
+      : nlpService.nlqToSQL({
+          text,
+          metrics: metrics as Record<string, string | string[]>[] | undefined,
+          jobId: config.dbtCloudJobID as string,
+          serviceToken: config.dbtCloudServiceToken as string,
+        }))
 
     // Run query against data
-    const sqlQueryResult = await dataService.runQuery(sqlQuery)
+    const sqlQueryResult = await (config.shouldUseLightdashSemanticLayer
+      ? (dataService as ILightdashDataService).runQuery(query as LightdashQuery)
+      : dataService.runSQLQuery(query as string))
     const { pretty, csv } = await formatQueryResult(sqlQueryResult)
 
     const [csvFile] = await Promise.all([
@@ -234,7 +246,7 @@ const handleMessage = async ({
               text: 'SQL',
             },
             action_id: 'view_sql',
-            value: sqlQuery,
+            value: JSON.stringify(query),
           },
         },
         ...(config.lightdashURL
@@ -252,9 +264,11 @@ const handleMessage = async ({
                     text: '⚡️ Lightdash',
                   },
                   action_id: 'view_in_lightdash',
-                  url: `${config.lightdashURL}/sqlRunner?sql_runner=${encodeURI(
-                    JSON.stringify({ sql: sqlQuery })
-                  )}`,
+                  url: config.shouldUseLightdashSemanticLayer
+                    ? `${config.lightdashURL}/tables/`
+                    : `${config.lightdashURL}/sqlRunner?sql_runner=${encodeURI(
+                        JSON.stringify({ sql: query })
+                      )}`,
                 },
               } as SectionBlock,
             ]
