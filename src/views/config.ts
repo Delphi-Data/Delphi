@@ -283,6 +283,39 @@ export const getConfigView = ({ config, type }: Params): ModalView => ({
               emoji: true,
             },
           },
+          {
+            block_id: 'shouldUseLightdashSemanticLayer',
+            type: 'input',
+            element: {
+              type: 'radio_buttons',
+              action_id: 'shouldUseLightdashSemanticLayer',
+              options: [
+                {
+                  text: {
+                    type: 'plain_text',
+                    text: 'dbt Cloud Semantic Layer',
+                  },
+                  value: 'false',
+                },
+                {
+                  text: {
+                    type: 'plain_text',
+                    text: 'Lightdash Semantic Layer',
+                  },
+                  value: 'true',
+                },
+              ],
+              initial_option: {
+                text: { type: 'plain_text', text: 'dbt Cloud Semantic Layer' },
+                value: 'false',
+              },
+            },
+            label: {
+              type: 'plain_text',
+              text: 'Semantic Layer Type',
+              emoji: true,
+            },
+          },
         ] as (Block | KnownBlock)[])
       : []),
     // Unclear if we need schema:

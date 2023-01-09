@@ -20,6 +20,7 @@ export type Config = {
   lightdashProjectID: string
   lightdashEmail: string
   lightdashPassword: string
+  shouldUseLightdashSemanticLayer: string
   [INSTALLATION_KEY]: string
 }
 
@@ -76,6 +77,8 @@ class EnvConfigService implements IConfigService {
       dbtCloudJobID: process.env.DBT_CLOUD_JOB_ID,
       dbtCloudServiceToken: process.env.DBT_CLOUD_SERVICE_TOKEN,
       lightdashURL: process.env.LIGHTDASH_URL,
+      shouldUseLightdashSemanticLayer:
+        process.env.SHOULD_USE_LIGHTDASH_SEMANTIC_LAYER,
       snowflakeAccount: process.env.SNOWFLAKE_ACCOUNT,
       snowflakeUsername: process.env.SNOWFLAKE_USERNAME,
       snowflakeAccessUrl: process.env.SNOWFLAKE_ACCESS_URL,

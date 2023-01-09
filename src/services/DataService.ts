@@ -3,6 +3,11 @@ import { SnowflakeCredentials } from '../types/snowflake'
 import { promisify } from 'util'
 import { Config } from './ConfigService'
 import fetch, { Response } from 'node-fetch'
+import {
+  LightdashCatalog,
+  LightdashField,
+  LightdashQuery,
+} from '../types/lightdash'
 
 export type QueryResult = Record<
   string,
@@ -10,14 +15,14 @@ export type QueryResult = Record<
 >[]
 
 interface IDataService {
-  readonly runQuery: (sql: string) => Promise<QueryResult>
+  readonly runSQLQuery: (sql: string) => Promise<QueryResult>
   readonly type: 'mock' | 'snowflake' | 'lightdash'
 }
 export type ILightdashDataService = LightdashDataService
 
 class MockDataService implements IDataService {
   type = 'mock' as const
-  runQuery() {
+  runSQLQuery() {
     return Promise.resolve([
       {
         date_week: new Date('2022-10-16'),
@@ -51,7 +56,7 @@ class SnowflakeDataService implements IDataService {
     this.connectionOptions = credentials
   }
 
-  async runQuery(sql: string) {
+  async runSQLQuery(sql: string) {
     console.info(`Beginning SnowflakeDataService runQuery`, { sql })
     const connection = snowflake.createConnection(this.connectionOptions)
     await promisify(connection.connect)()
@@ -73,9 +78,9 @@ class SnowflakeDataService implements IDataService {
 }
 
 class LightdashDataService implements IDataService {
-  private baseURL: string
-  private projectID: string
-  private cookie?: string
+  protected baseURL: string
+  protected projectID: string
+  protected cookie?: string
   type = 'lightdash' as const
   constructor(baseURL: string, projectID: string) {
     this.baseURL = baseURL
@@ -111,8 +116,8 @@ class LightdashDataService implements IDataService {
     }
   }
 
-  async getMetrics(): Promise<Record<string, string | string[]>[]> {
-    console.info(`[LightdashDataService] beginning getMetrics() call`)
+  private async getDbtMetrics(): Promise<Record<string, string | string[]>[]> {
+    console.info(`[LightdashDbtDataService] beginning getDbtMetrics() call`)
     const res = await fetch(
       `${this.baseURL}/api/v1/projects/${this.projectID}/integrations/dbt-cloud/metrics`,
       {
@@ -128,12 +133,19 @@ class LightdashDataService implements IDataService {
       }
     ).results.metrics
     metrics?.forEach((metric) => delete metric.uniqueId) // codex tries to use `uniqueID` instead of `name` in the SQL it generates if we include this
-    console.info(`[LightdashDataService] found metrics`, metrics)
+    console.info(`[LightdashDbtDataService] found dbt metrics`, metrics)
     return metrics
   }
 
-  async runQuery(sql: string) {
-    console.info(`Beginning LightdashDataService runQuery()`, { sql })
+  async getMetrics(): Promise<Record<string, string | string[]>[]> {
+    console.info(`[LightdashDbtDataService] beginning getMetrics() call`)
+    const metrics = await this.getDbtMetrics()
+    console.info(`[LightdashDbtDataService] found metrics`, metrics)
+    return metrics
+  }
+
+  async runSQLQuery(sql: string) {
+    console.info(`Beginning LightdashDbtDataService runQuery()`, { sql })
     const res = await fetch(
       `${this.baseURL}/api/v1/projects/${this.projectID}/sqlQuery`,
       {
@@ -151,12 +163,128 @@ class LightdashDataService implements IDataService {
     return data.results?.rows
   }
 
+  private async getLightdashMetricsAndDimensions(): Promise<LightdashCatalog> {
+    console.info(`[LightdashDataService] beginning getLightdashMetrics() call`)
+
+    // Get all available explores
+    const res = await fetch(
+      `${this.baseURL}/api/v1/projects/${this.projectID}/catalog`,
+      {
+        method: 'GET',
+        headers: {
+          cookie: this.cookie as string,
+        },
+      }
+    )
+    const catalog = (
+      (await res.json()) as {
+        results: Record<
+          string,
+          Record<
+            string,
+            Record<string, { description: string; sqlTable: string }>
+          >
+        >
+      }
+    ).results
+    const [database] = Object.values(catalog)
+    const [schema] = Object.values(database)
+    const explores = Object.keys(schema)
+
+    // Iterate over explores to get available dimensions and metrics
+    const metrics = [] as LightdashField[]
+    const dimensions = [] as LightdashField[]
+    await Promise.all(
+      explores.map(async (explore) => {
+        const exploreRes = await fetch(
+          `${this.baseURL}/api/v1/projects/${this.projectID}/explores/${explore}`,
+          {
+            method: 'GET',
+            headers: {
+              cookie: this.cookie as string,
+            },
+          }
+        )
+        const exploreCatalog = (await exploreRes.json()) as {
+          results: {
+            tables: Record<
+              string,
+              {
+                metrics: Record<string, LightdashField>
+                dimensions: Record<string, LightdashField>
+              }
+            >
+          }
+        }
+
+        metrics.push(
+          ...Object.values(
+            Object.values(exploreCatalog.results.tables)
+              .flatMap((table) => Object.values(table.metrics))
+              .map((metric) => ({
+                name: metric.name,
+                // description: metric.description,
+                description: '',
+                table: metric.table,
+                explore,
+              }))
+          )
+        )
+        dimensions.push(
+          ...Object.values(
+            Object.values(exploreCatalog.results.tables)
+              .flatMap((table) => Object.values(table.dimensions))
+              .map((dimension) => ({
+                name: dimension.name,
+                // description: dimension.description,
+                description: '',
+                table: dimension.table,
+                explore,
+              }))
+          )
+        )
+      })
+    )
+    return { metrics, dimensions }
+  }
+
+  async getMetricsAndDimensions(): Promise<LightdashCatalog> {
+    console.info(`[LightdashDataService] beginning getMetrics() call`)
+    const catalog = await this.getLightdashMetricsAndDimensions()
+    console.info(`[LightdashDataService] found metrics and dimensions`, catalog)
+    return catalog
+  }
+
+  async runQuery({ explore, dimensions, metrics }: LightdashQuery) {
+    console.info(`Beginning LightdashDataService runQuery()`, {
+      explore,
+      dimensions,
+      metrics,
+    })
+    const res = await fetch(
+      `${this.baseURL}/api/v1/projects/${this.projectID}/explores/${explore}/runQuery`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: this.cookie as string,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dimensions,
+          metrics,
+        }),
+      }
+    )
+    const data = (await res.json()) as { results: { rows: QueryResult } }
+    return data.results?.rows
+  }
+
   static async fetchLightdashDataService(
     baseURL: string,
     projectID: string,
     email: string,
     password: string
-  ): Promise<LightdashDataService> {
+  ): Promise<LightdashDataService | LightdashDataService> {
     const lightdashDataService = new LightdashDataService(baseURL, projectID)
     await lightdashDataService.setCookie(email, password)
     return lightdashDataService
