@@ -255,7 +255,11 @@ class LightdashDataService implements IDataService {
     return catalog
   }
 
-  async runQuery({ explore, dimensions, metrics }: LightdashQuery) {
+  async runQuery({
+    explore,
+    dimensions,
+    metrics,
+  }: LightdashQuery): Promise<QueryResult> {
     console.info(`Beginning LightdashDataService runQuery()`, {
       explore,
       dimensions,
@@ -272,11 +276,29 @@ class LightdashDataService implements IDataService {
         body: JSON.stringify({
           dimensions,
           metrics,
+          additionalMetrics: [],
+          sorts: [],
+          tableCalculations: [],
+          filters: {},
+          limit: 5000,
         }),
       }
     )
-    const data = (await res.json()) as { results: { rows: QueryResult } }
-    return data.results?.rows
+    const data = (await res.json()) as {
+      results: {
+        rows: Record<
+          string,
+          {
+            value: { raw: string | number | boolean | JSON; formatted: string }
+          }
+        >[]
+      }
+    }
+    return data.results?.rows.map((row) =>
+      Object.fromEntries(
+        Object.entries(row).map((entry) => [entry[0], entry[1].value.formatted])
+      )
+    )
   }
 
   static async fetchLightdashDataService(
