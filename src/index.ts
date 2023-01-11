@@ -269,7 +269,7 @@ const handleMessage = async ({
                     config.shouldUseLightdashSemanticLayer === 'true'
                       ? `${config.lightdashURL}/tables/${
                           (query as LightdashQuery).explore
-                        }?create_saved_table_version=${(
+                        }?create_saved_chart_version=${(
                           dataService as ILightdashDataService
                         ).getQueryString(query as LightdashQuery)}`
                       : `${
