@@ -168,7 +168,7 @@ class LightdashDataService implements IDataService {
 
     // Get all available explores
     const res = await fetch(
-      `${this.baseURL}/api/v1/projects/${this.projectID}/catalog`,
+      `${this.baseURL}/api/v1/projects/${this.projectID}/explores?filtered=true`,
       {
         method: 'GET',
         headers: {
@@ -176,23 +176,21 @@ class LightdashDataService implements IDataService {
         },
       }
     )
-    const catalog = (
+    const explores = (
       (await res.json()) as {
-        results: Record<
-          string,
-          Record<
-            string,
-            Record<string, { description: string; sqlTable: string }>
-          >
-        >
+        results: {
+          databaseName: string
+          description: string
+          label: string
+          name: string
+          schemaName: string
+          tags: string[]
+          errors?: string[]
+        }[]
       }
     ).results
-    console.info(`catalog`, catalog)
-    console.info(`${JSON.stringify(catalog)}`)
-
-    const [database] = Object.values(catalog)
-    const schemas = Object.values(database)
-    const explores = schemas.flatMap((schema) => Object.keys(schema))
+      .filter((explore) => typeof explore.errors === 'undefined')
+      .map((explore) => explore.name)
 
     console.info('explores', explores)
 
