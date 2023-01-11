@@ -191,8 +191,8 @@ class LightdashDataService implements IDataService {
     console.info(`${JSON.stringify(catalog)}`)
 
     const [database] = Object.values(catalog)
-    const [schema] = Object.values(database)
-    const explores = Object.keys(schema)
+    const schemas = Object.values(database)
+    const explores = schemas.flatMap((schema) => Object.keys(schema))
 
     console.info('explores', explores)
 
