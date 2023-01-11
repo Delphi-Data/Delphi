@@ -309,6 +309,31 @@ class LightdashDataService implements IDataService {
     )
   }
 
+  getQueryString(query: LightdashQuery) {
+    return encodeURI(
+      JSON.stringify({
+        tableName: query.explore,
+        metricQuery: {
+          dimensions: query.dimensions,
+          metrics: query.metrics,
+          filters: {},
+          sorts: [],
+          limit: 500,
+          tableCalculations: [],
+          additionalMetrics: [],
+        },
+        pivotConfig: undefined,
+        tableConfig: {
+          columnOrder: [],
+        },
+        chartConfig: {
+          type: 'cartesian',
+          config: { layout: {}, eChartsConfig: {} },
+        },
+      })
+    )
+  }
+
   static async fetchLightdashDataService(
     baseURL: string,
     projectID: string,

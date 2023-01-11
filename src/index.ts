@@ -267,7 +267,11 @@ const handleMessage = async ({
                   action_id: 'view_in_lightdash',
                   url:
                     config.shouldUseLightdashSemanticLayer === 'true'
-                      ? `${config.lightdashURL}/tables/`
+                      ? `${config.lightdashURL}/tables/${
+                          (query as LightdashQuery).explore
+                        }?create_saved_table_version=${(
+                          dataService as ILightdashDataService
+                        ).getQueryString(query as LightdashQuery)}`
                       : `${
                           config.lightdashURL
                         }/sqlRunner?sql_runner=${encodeURI(
