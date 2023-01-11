@@ -187,9 +187,14 @@ class LightdashDataService implements IDataService {
         >
       }
     ).results
+    console.info(`catalog`, catalog)
+    console.info(`${JSON.stringify(catalog)}`)
+
     const [database] = Object.values(catalog)
     const [schema] = Object.values(database)
     const explores = Object.keys(schema)
+
+    console.info('explores', explores)
 
     // Iterate over explores to get available dimensions and metrics
     const metrics = [] as LightdashField[]
