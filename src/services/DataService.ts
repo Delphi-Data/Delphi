@@ -217,6 +217,9 @@ class LightdashDataService implements IDataService {
           }
         }
 
+        console.info(`found exploreCatalog`, exploreCatalog)
+        console.info(`${JSON.stringify(exploreCatalog)}`)
+
         metrics.push(
           ...Object.values(
             Object.values(exploreCatalog.results.tables)
